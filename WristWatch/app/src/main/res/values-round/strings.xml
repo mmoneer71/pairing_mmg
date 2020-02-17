@@ -1,0 +1,4 @@
+<resources>
+    <string name="title">Shake it!</string>
+    <string name="instructions">Tap the button and wait 1s before shaking!</string>
+</resources>

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <com.example.dario_dell.smartphone.DrawingView
+            android:id="@+id/drawing"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:src="@drawable/ic_launcher_background"/>
+
+        <TextView
+            android:id="@+id/velocityx"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:text="@string/velocityx"
+            android:textSize="16sp"/>
+
+        <TextView
+            android:id="@+id/maxvelocityx"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:layout_below="@+id/velocityx"
+            android:text="@string/maxvelocityx"
+            android:textSize="16sp"/>
+
+        <TextView
+            android:id="@+id/velocityy"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:layout_below="@+id/maxvelocityx"
+            android:text="@string/velocityy"
+            android:textSize="16sp"/>
+
+        <TextView
+            android:id="@+id/maxvelocityy"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:layout_below="@+id/velocityy"
+            android:text="@string/maxvelocityy"
+            android:textSize="16sp"/>
+
+        <TextView
+            android:id="@+id/velocity_magnitude"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:layout_below="@+id/maxvelocityy"
+            android:text="@string/velocity_magnitude"
+            android:textSize="16sp"/>
+
+    </RelativeLayout>
+
+</android.support.constraint.ConstraintLayout>

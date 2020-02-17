@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Smartphone app</string>
+    <string name="velocityx">X-velocity (pixel/s): 0</string>
+    <string name="maxvelocityx">max. X-velocity: 0</string>
+    <string name="velocityy">Y-velocity (pixel/s): 0</string>
+    <string name="maxvelocityy">max. Y-velocity: 0</string>
+    <string name="velocity_magnitude">Velocity magnitude: 0</string>
+</resources>
