@@ -8,7 +8,6 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
-import android.os.CountDownTimer;
 import android.os.Environment;
 import android.support.v4.app.ActivityCompat;
 import android.support.wearable.activity.WearableActivity;
@@ -48,12 +47,15 @@ public class MainActivity extends WearableActivity implements SensorEventListene
 
     // resulting string to write into a CSV file
     // Init: CSV file header
-    String to_write = "timestamp,x_acc,y_acc,z_acc\n";
+    String to_write = "timestamp,x_acc,y_acc,z_acc,x_lin_acc,y_lin_acc,z_lin_acc\n";
 
     //variables needed for detecting the Shaking Gesture
     private long lastUpdate = 0;
-    private float x, y, z = 0;
+    private long startTime = 0;
+    private float x_acc, y_acc, z_acc;
     private long curTime = 0;
+    private int samplesCount = 0;
+    private float x_calibration = 0, y_calibration = 0, z_calibration = 0;
 
     //sensitivity for detecting the Shaking Gesture
     private static final int SHAKE_THRESHOLD = 0;
@@ -62,7 +64,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
     no actual information is lost in the sampling process
     when reconstructing the 50Hz signal.
     Change it if you need a different frequency */
-    private static final int TIME_INTERVAL = 10;
+
     private final int MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL = 1;
 
 
@@ -73,7 +75,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
         setContentView(R.layout.activity_main);
 
         senSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        senAccelerometer = senSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
+        senAccelerometer = senSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
         instructionsTxtView = findViewById(R.id.instructions);
         waitTxtView = findViewById(R.id.wait);
@@ -92,24 +94,10 @@ public class MainActivity extends WearableActivity implements SensorEventListene
                 justStarted = false;
                 if (isStart){
                     instructionsTxtView.setVisibility(View.INVISIBLE);
-                    waitTxtView.setVisibility(View.VISIBLE);
+					goTxtView.setVisibility(View.VISIBLE);
                     startBtn.setText("STOP");
-                    startBtn.setEnabled(false);
-
-                    //countdown before starting to register sensor data
-                    new CountDownTimer(1000, 1) {
-                        public void onTick(long millisUntilFinished) {
-                        }
-
-                        @Override
-                        public void onFinish() {
-                            waitTxtView.setVisibility(View.INVISIBLE);
-                            goTxtView.setVisibility(View.VISIBLE);
-                            senSensorManager.registerListener(MainActivity.this,
-                                    senAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);
-                            startBtn.setEnabled(true);
-                        }
-                    }.start();
+                    senSensorManager.registerListener(MainActivity.this,
+                            senAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);
 
                 } else {
                     //View update
@@ -119,10 +107,24 @@ public class MainActivity extends WearableActivity implements SensorEventListene
                     waitTxtView.setVisibility(View.INVISIBLE);
                     goTxtView.setVisibility(View.INVISIBLE);
 
-                    // Write to file after tapping the "Stop" button
+
+                    // Write data to file
                     writeToFile();
-                    // Reinitialize the output string
-                    to_write = "timestamp,x_acc,y_acc,z_acc\n";
+
+
+                    // Log the calibration values
+                    Log.d("Calibration:", x_calibration / samplesCount +
+                            " " + y_calibration / samplesCount  +
+                            " " + z_calibration / samplesCount );
+                    Log.d("Samples:", String.valueOf(samplesCount));
+
+                    // Reinitialize the parameters
+                    to_write = "timestamp,x_acc,y_acc,z_acc,x_lin_acc,y_lin_acc,z_lin_acc\n";
+                    startTime = 0;
+                    samplesCount = 0;
+                    x_calibration = 0;
+                    y_calibration = 0;
+                    z_calibration = 0;
 
                 }
                 isStart = !isStart;
@@ -147,34 +149,62 @@ public class MainActivity extends WearableActivity implements SensorEventListene
     public void onSensorChanged(SensorEvent sensorEvent) {
         Sensor mySensor = sensorEvent.sensor;
 
-        if (mySensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION/* Sensor.TYPE_ACCELEROMETER */) {
+        // Gravity removal LPF time constant
+        // Calculated for frequency of 100Hz
+        final float alpha = 0.0016f;
+        // Gravity values on x, y and z axis
+        // final float[] gravity = {-0.032f, -0,07f, 9.8f};
+        final float[] gravity = {0.0f, 0.0f, 0.0f};
 
-            // Acceleration minus Gx on the x-axis
-            x = sensorEvent.values[0];
-            // Acceleration minus Gy on the y-axis
-            y = sensorEvent.values[1];
-            // Acceleration minus Gz on the z-axis
-            z = sensorEvent.values[2];
-            curTime = System.currentTimeMillis();
+        if (mySensor.getType() == Sensor.TYPE_ACCELEROMETER) {
 
-            /* check whether more than TIME_INTERVAL msec
-               (e.g: 10 msec) have passed since the last
-               time onSensorChanged was invoked */
-            if ((curTime - lastUpdate) >= TIME_INTERVAL) {
-                long diffTime = curTime - lastUpdate;
-                lastUpdate = curTime;
+            // Acceleration on the x-axis
+            x_acc = sensorEvent.values[0];
+            // Acceleration on the y-axis
+            y_acc = sensorEvent.values[1];
+            // Acceleration on the z-axis
+            z_acc = sensorEvent.values[2];
 
-                to_write += System.currentTimeMillis() + text_separator +
-                            x + text_separator +
-                            y + text_separator +
-                            z + "\n";
-            }
+            // Calculate calibration values in stationary position
+            // for higher accuracy results
+            x_calibration += x_acc;
+            y_calibration += y_acc;
+            z_calibration += z_acc;
+            samplesCount++;
+
+
+            // Isolate the force of gravity with the low-pass filter
+            gravity[0] = alpha * gravity[0] + (1 - alpha) * x_acc;
+            gravity[1] = alpha * gravity[1] + (1 - alpha) * y_acc;
+            gravity[2] = alpha * gravity[2] + (1 - alpha) * z_acc;
+
+            // Remove the gravity contribution with the high-pass filter
+            float x_lin_acc = x_acc - gravity[0];
+            float y_lin_acc = y_acc - gravity[1];
+            float z_lin_acc = z_acc - gravity[2];
+
+            to_write += System.currentTimeMillis() + text_separator +
+                    x_acc + text_separator +
+                    y_acc + text_separator +
+                    z_acc + text_separator +
+                    x_lin_acc + text_separator +
+                    y_lin_acc + text_separator +
+                    z_lin_acc + "\n";
+
+            Log.d("acc: ", x_acc + " " + y_acc + " " + z_acc);
+
+            /*if (samplesCount == 1024) {
+                samplesCount = 0;
+                x_calibration = 0;
+                y_calibration = 0;
+                z_calibration = 0;
+            }*/
         }
     }
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int i) {
-
+        Log.d("Acc_change", String.valueOf(i));
     }
 
     //Method for writing to file after tapping the "Stop" button
