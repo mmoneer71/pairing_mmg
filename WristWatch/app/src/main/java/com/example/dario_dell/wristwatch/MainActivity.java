@@ -149,7 +149,7 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
 
     @Override
     public void run() {
-        handler.postDelayed(this, 10);
+        handler.postDelayed(this, 20);
         logData();
     }
 
