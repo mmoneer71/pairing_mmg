@@ -20,7 +20,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
 
-public class MainActivity extends WearableActivity implements AccelerationSensorObserver, Runnable{
+public class MainActivity extends WearableActivity implements AccelerationSensorObserver, LinearAccelerationSensorObserver, Runnable{
 
     //view components
     private TextView instructionsTxtView, waitTxtView, goTxtView;
@@ -52,6 +52,8 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
     private long startTime = 0;
     private float x_acc, y_acc, z_acc;
     private float[] acceleration = new float[3];
+    // https://stackoverflow.com/questions/15158769/android-acceleration-direction
+    private float[] linearAcceleration = new float[3];
     private long curTime = 0;
     private int samplesCount = 0;
     private float x_calibration = 0, y_calibration = 0, z_calibration = 0;
@@ -64,7 +66,7 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
     when reconstructing the 50Hz signal.
     Change it if you need a different frequency */
 
-    private AccelerationSensor accelerationSensor;
+
     private final int MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL = 1;
     private long logTime = 0;
     private int generation = 0;
@@ -72,6 +74,13 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
     private Handler handler;
     // Output log
     private String log;
+
+
+    private AccelerationSensor accelerationSensor;
+    private GravitySensor gravitySensor;
+    private GyroscopeSensor gyroscopeSensor;
+    private MagneticSensor magneticSensor;
+    private LinearAccelerationSensor linearAccelerationSensor;
 
 
     @Override
@@ -85,6 +94,12 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         goTxtView = findViewById(R.id.go);
 
         accelerationSensor = new AccelerationSensor(this);
+        linearAccelerationSensor = new LinearAccelerationSensor();
+        gravitySensor = new GravitySensor(this);
+        gyroscopeSensor = new GyroscopeSensor(this);
+        magneticSensor = new MagneticSensor(this);
+
+
         handler = new Handler();
         log = "";
 
@@ -126,6 +141,11 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
     protected void onPause() {
         super.onPause();
         accelerationSensor.removeAccelerationObserver(this);
+        accelerationSensor.removeAccelerationObserver(linearAccelerationSensor);
+        gravitySensor.removeGravityObserver(linearAccelerationSensor);
+        gyroscopeSensor.removeGyroscopeObserver(linearAccelerationSensor);
+        magneticSensor.removeMagneticObserver(linearAccelerationSensor);
+        linearAccelerationSensor.removeLinearAccelerationObserver(this);
         handler.removeCallbacks(this);
         //senSensorManager.unregisterListener(this);
     }
@@ -135,6 +155,13 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         super.onResume();
         handler.post(this);
         accelerationSensor.registerAccelerationObserver(this);
+        accelerationSensor
+                .registerAccelerationObserver(linearAccelerationSensor);
+        gravitySensor.registerGravityObserver(linearAccelerationSensor);
+        gyroscopeSensor.registerGyroscopeObserver(linearAccelerationSensor);
+        magneticSensor.registerMagneticObserver(linearAccelerationSensor);
+
+        linearAccelerationSensor.registerLinearAccelerationObserver(this);
         /*if (!justStarted)
             senSensorManager.registerListener(this, senAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);*/
     }
@@ -145,6 +172,14 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         // Get a local copy of the sensor values
         System.arraycopy(acceleration, 0, this.acceleration, 0,
                 acceleration.length);
+    }
+
+    @Override
+    public void onLinearAccelerationSensorChanged(float[] linearAcceleration,
+                                                  long timeStamp) {
+        // Get a local copy of the sensor values
+        System.arraycopy(linearAcceleration, 0, this.linearAcceleration, 0,
+                linearAcceleration.length);
     }
 
     @Override
@@ -164,9 +199,14 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
 
             log += acceleration[0] + ",";
             log += acceleration[1] + ",";
-            log += acceleration[2];
+            log += acceleration[2] + ",";
+            log += linearAcceleration[0] + ",";
+            log += linearAcceleration[1] + ",";
+            log += linearAcceleration[2];
+
             Log.d("Generation", String.valueOf(generation));
-            Log.d("Acceleration", acceleration[0] + " " + acceleration[1]  + " " + acceleration[2]);
+            Log.d("Linear Acceleration", acceleration[0] + " " + acceleration[1]  + " " + acceleration[2]);
+            Log.d("Fused Linear Acceleration", linearAcceleration[0] + " " + linearAcceleration[1]  + " " + linearAcceleration[2]);
             log += System.getProperty("line.separator");
         }
     }
