@@ -40,6 +40,7 @@ package com.example.dario_dell.wristwatch;
  */
 
 import android.hardware.SensorManager;
+import android.util.Log;
 
 import java.util.ArrayList;
 
@@ -96,7 +97,7 @@ public class LinearAccelerationSensor implements GyroscopeSensorObserver,
     // list to keep track of the observers
     private ArrayList<LinearAccelerationSensorObserver> observersAngularVelocity;
 
-    private boolean hasOrientation = false;
+    private boolean hasOrientation = false, hasMagnetic = false;
 
     private float dT = 0;
 
@@ -346,14 +347,17 @@ public class LinearAccelerationSensor implements GyroscopeSensorObserver,
     @Override
     public void onMagneticSensorChanged(float[] magnetic, long timeStamp) {
         // Get a local copy of the raw magnetic values from the device sensor.
+        //Log.d("magno", "magno changed");
         System.arraycopy(magnetic, 0, this.magnetic, 0, magnetic.length);
 
         this.magnetic = meanFilterMagnetic.filterFloat(this.magnetic);
+        this.hasMagnetic = true;
     }
 
     @Override
     public void onAccelerationSensorChanged(float[] acceleration, long timeStamp) {
         // Get a local copy of the raw magnetic values from the device sensor.
+        //Log.d("acc", "acc changed");
         System.arraycopy(acceleration, 0, this.acceleration, 0,
                 acceleration.length);
 
@@ -364,17 +368,20 @@ public class LinearAccelerationSensor implements GyroscopeSensorObserver,
     @Override
     public void onGravitySensorChanged(float[] gravity, long timeStamp) {
         // Get a local copy of the raw magnetic values from the device sensor.
+        //Log.d("gravity", "gravity changed");
         System.arraycopy(gravity, 0, this.gravity, 0, gravity.length);
 
         this.gravity = meanFilterGravity.filterFloat(this.gravity);
-
-        calculateOrientation();
+        if (hasMagnetic) {
+            calculateOrientation();
+        }
     }
 
     @Override
     public void onGyroscopeSensorChanged(float[] gyroscope, long timeStamp) {
         // don't start until first accelerometer/magnetometer orientation has
         // been acquired
+        //Log.d("gyro", "gyro changed");
         if (!hasOrientation) {
             return;
         }
