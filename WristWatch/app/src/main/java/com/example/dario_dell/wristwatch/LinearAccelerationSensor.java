@@ -97,7 +97,9 @@ public class LinearAccelerationSensor implements GyroscopeSensorObserver,
     // list to keep track of the observers
     private ArrayList<LinearAccelerationSensorObserver> observersAngularVelocity;
 
-    private boolean hasOrientation = false, hasMagnetic = false;
+    private boolean hasOrientation = false, hasMagnetic = false, isStable = false;
+
+    private long startTime = 0;
 
     private float dT = 0;
 
@@ -164,6 +166,8 @@ public class LinearAccelerationSensor implements GyroscopeSensorObserver,
      */
     public LinearAccelerationSensor() {
         super();
+
+        startTime = System.currentTimeMillis();
 
         observersAngularVelocity = new ArrayList<LinearAccelerationSensorObserver>();
 
@@ -503,6 +507,14 @@ public class LinearAccelerationSensor implements GyroscopeSensorObserver,
     }
 
     private void calculateLinearAcceleration() {
+
+        if (!isStable) {
+            long currentTime = System.currentTimeMillis();
+            if (currentTime - startTime > 10000) {
+                isStable = true;
+            }
+            return;
+        }
         System.arraycopy(gyroOrientation, 0, absoluteFrameOrientation, 0, 3);
 
         // values[0]: azimuth, rotation around the Z axis.
@@ -532,8 +544,12 @@ public class LinearAccelerationSensor implements GyroscopeSensorObserver,
         linearAcceleration[0] = (this.acceleration[0] - components[0]);
         linearAcceleration[1] = (this.acceleration[1] - components[1]);
         linearAcceleration[2] = (this.acceleration[2] - components[2]);
-
         this.linearAcceleration = meanFilterLinearAcceleration
                 .filterFloat(this.linearAcceleration);
     }
+
+    public boolean getFustionSystemStability() {
+        return isStable;
+    }
+
 }

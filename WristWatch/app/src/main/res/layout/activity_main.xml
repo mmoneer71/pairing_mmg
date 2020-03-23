@@ -71,7 +71,8 @@
             android:layout_alignParentBottom="true"
             android:layout_centerHorizontal="true"
             android:layout_marginBottom="4dp"
-            android:text="START" />
+            android:enabled="false"
+            android:text="WRITE" />
 
 
     </RelativeLayout>

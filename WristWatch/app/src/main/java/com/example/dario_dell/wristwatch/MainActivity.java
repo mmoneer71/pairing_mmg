@@ -70,7 +70,7 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
     private final int MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL = 1;
     private long logTime = 0;
     private int generation = 0;
-    private boolean logData = false;
+    private boolean logData = true;
     private Handler handler;
     // Output log
     private String log;
@@ -110,15 +110,17 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
                     MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL);
         }
 
+
         startBtn = findViewById(R.id.startBtn);
         startBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                justStarted = false;
-                if (isStart){
+                writeToFile();
+                log = "";
+                logData = false;
+                /*if (isStart){
                     instructionsTxtView.setVisibility(View.INVISIBLE);
 					goTxtView.setVisibility(View.VISIBLE);
                     startBtn.setText("STOP");
-                    logData = true;
 
 
                 } else {
@@ -128,11 +130,9 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
                     waitTxtView.setVisibility(View.INVISIBLE);
                     goTxtView.setVisibility(View.INVISIBLE);
                     logData = false;
-                    writeToFile();
-                    log = "";
 
                 }
-                isStart = !isStart;
+                isStart = !isStart;*/
             }
         });
     }
@@ -180,6 +180,12 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         // Get a local copy of the sensor values
         System.arraycopy(linearAcceleration, 0, this.linearAcceleration, 0,
                 linearAcceleration.length);
+
+        if (!linearAccelerationSensor.getFustionSystemStability()) {
+            Log.d("Calibration", "Still calibrating...");
+            return;
+        }
+        startBtn.setEnabled(true);
     }
 
     @Override
@@ -205,7 +211,6 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
             log += linearAcceleration[2];
 
             Log.d("Generation", String.valueOf(generation));
-            Log.d("Linear Acceleration", acceleration[0] + " " + acceleration[1]  + " " + acceleration[2]);
             Log.d("Fused Linear Acceleration", linearAcceleration[0] + " " + linearAcceleration[1]  + " " + linearAcceleration[2]);
             log += System.getProperty("line.separator");
         }
