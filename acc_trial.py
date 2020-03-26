@@ -21,29 +21,6 @@ def calculate_derivative_list(timestampList, toCalcList):
         resultList.append((toCalc[i + 1] - toCalc[i]) / (timestampList[i + 1] - timestampList[i]))
     return resultList
 
-def apply_lowpass_filter(a, cutoff_freq):
-    if (a is None or len(a) == 0 or cutoff_freq is None 
-        or cutoff_freq<0):
-        ValueError(" apply_lowpass_filter:  invalid parameters ")
-    a[cutoff_freq:] = 0
-    return a
-
-# dictionary for the Grey-code extraction
-grey_code_dict =	{
-  '1': '01',
-  '0': '00',
-  '-1': '11'
-}
-
-# jump in terms of datapoint used for extracting the grey codedata_watch['x_acc_fin'][firstpeak_index:len(x_dy)]
-jump = 2
-# global variables used as parameters of Savitzky-Golay filers
-window_length_savgol = 15
-polyorder_savgol = 5
-fc = 40
-
-
-
 def grey_code_extraction_2bit(a, b):
     if (a is None or len(a) == 0 or b is None or len(b) == 0):
         ValueError(" grey_code_extraction:  invalid parameters ")
@@ -66,122 +43,140 @@ def grey_code_extraction_2bit(a, b):
         i += 1
     return bits_str
 
-
-vel_file_path = 'Test_Data/Real_Beginning/gravity_removal_api/Drawing_Data/2020-02-10_1_smartphone_sample.csv'
-cmp_file_path = 'Test_Data/Real_Beginning/gravity_removal_api/Drawing_Data/2020-02-10_1_smartphone_sample.csv'
-acc_file_path = 'Test_Data/Real_Beginning/gravity_removal_api/Accelerometer_Data/2020-02-10_1_watch_sample_copy.csv'
+# dictionary for the Grey-code extraction
+grey_code_dict =	{
+  '1': '01',
+  '0': '00',
+  '-1': '11'
+}
+# jump in terms of datapoint used for extracting the grey codedata_watch['x_acc_fin'][firstpeak_index:len(x_dy)]
+jump = 2
+vel_file_path = 'Test_Data/fusion_tests/type_acc_lin1/Drawing_Data/2020-03-24_1_smartphone_sample.csv'
+acc_file_path = 'Test_Data/fusion_tests/type_acc_lin1/Accelerometer_Data/2020-03-24_1_watch_sample.csv'
 
 
 # DataFrame collection from files
 data_phone = pd.read_csv(vel_file_path, engine='python')
-data_cmp = pd.read_csv(cmp_file_path, engine='python')
 data_watch = pd.read_csv(acc_file_path, engine='python')
+#-4.8085445E-4 -1.5577588E-4
+calib_acc = {'x_avg': -0.07737972, 'y_avg':-0.032692935, 'x_min':-0.2, 'y_min':-0.2, 'x_max': 0.2, 'y_max':0.2}
+calib_vel = {'x_min':-0.03, 'y_min':-0.03, 'x_max': 0.03, 'y_max':0.03}
 
 
-#plt.plot(data_phone['x'], data_phone['y'])
+#data_watch['x_acc'] -= data_watch['x_acc'].mean()
+#data_watch['y_acc'] -= data_watch['y_acc'].mean()
+
+
+x_vel_filtered = data_phone['x_velocity_filtered'] #sig.savgol_filter(data_phone['x_velocity'], window_length_savgol, polyorder_savgol)
+y_vel_filtered = data_phone['y_velocity_filtered'] * -1 #sig.savgol_filter(data_phone['y_velocity'], window_length_savgol, polyorder_savgol)
+
+for i in range(0, len(data_watch['x_lin_acc'])):
+     if data_watch['x_lin_acc'][i] <= calib_acc['x_max'] and data_watch['x_lin_acc'][i] >= calib_acc['x_min']:
+         #print(data_watch['x_acc'][i])
+         data_watch['x_lin_acc'][i] = 0
+     if data_watch['y_lin_acc'][i] <= calib_acc['y_max'] and data_watch['y_lin_acc'][i] >= calib_acc['y_min']:
+         #print(data_watch['y_acc'][i])
+         data_watch['y_lin_acc'][i] = 0
+
+
+for i in range(0, len(x_vel_filtered)):
+     if x_vel_filtered[i] <= calib_vel['x_max'] and x_vel_filtered[i] >= calib_vel['x_min']:
+         #print(data_watch['x_acc'][i])
+         x_vel_filtered[i] = 0
+     if y_vel_filtered[i] <= calib_vel['y_max'] and y_vel_filtered[i] >= calib_vel['y_min']:
+         #print(data_wax_veltch['y_acc'][i])
+         y_vel_filtered[i] = 0
+
+#output = sig.filtfilt(b, a, data_watch['x_acc'])
+#plt.plot(data_watch['timestamp'], output)
+#plt.figure()
+#plt.plot(data_watch['timestamp'], data_watch['x_lin_acc'], label='lin_acc')
+#plt.plot(data_watch['timestamp'], data_watch['x_acc'], label='acc')
+
+
+#plt.plot(range(0, len(data_watch['x_lin_acc'])), data_watch['x_lin_acc'])
+#plt.plot(range(0, len(x_vel_refined)), x_vel_refined)
+
+
+
+#x_vel_filtered[0] =  0.0
+#y_vel_filtered[0] =  0.0
+
+
+for i in range(0, len(data_watch['x_lin_acc'])):
+    if data_watch['x_lin_acc'][i] != 0:
+        x_acc_start = i #print(i, len(data_watch['x_lin_acc']))
+        break
+
+for i in range(len(data_watch['x_lin_acc']) -1 , -1, -1):
+    if data_watch['x_lin_acc'][i] != 0:
+        x_acc_end = i #print(i, len(data_watch['x_lin_acc']))
+        break
+
+for i in range(0, len(data_watch['y_lin_acc'])):
+    if data_watch['y_lin_acc'][i] != 0:
+        y_acc_start = i #print(i, len(data_watch['x_lin_acc']))
+        break
+
+for i in range(len(data_watch['y_lin_acc']) -1 , -1, -1):
+    if data_watch['y_lin_acc'][i] != 0:
+        y_acc_end = i #print(i, len(data_watch['x_lin_acc']))
+        break
+
+x_diff = x_acc_end - x_acc_start
+y_diff = y_acc_end - y_acc_start
+
+if x_diff > y_diff:
+    acc_start = x_acc_start
+    acc_end = x_acc_end
+else:
+    acc_start = y_acc_start
+    acc_end = y_acc_end
+
+x_acc_filtered = data_watch['x_lin_acc'][acc_start - 2 : acc_end + 2]
+y_acc_filtered = data_watch['y_lin_acc'][acc_start - 2 : acc_end + 2]
+
+
+x_vel = cumtrapz(x_acc_filtered)
+x_pos = cumtrapz(x_vel)
+
+#plt.plot(range(0, len(data_phone['x_velocity'])), data_phone['x_velocity'])
+
+
+
+y_vel = cumtrapz(y_acc_filtered)
+y_pos = cumtrapz(y_vel)
+
+#plt.plot(range(0, len(y_vel)), y_vel)
 #plt.figure()
 
-#dx = 0.05
-x_dy = calculate_derivative_list(data_phone['timestamp'], data_phone['x']) #np.diff(data_phone['x'])
-#x_dy = np.append(x_dy, data_phone['x_velocity'][0])
+#TODO: revisit
 
+y_vel = y_vel[:len(y_vel_filtered)]
+x_vel = x_vel[:len(x_vel_filtered)]
 
-
-y_dy = calculate_derivative_list(data_phone['timestamp'], data_phone['y']) #np.diff(data_phone['y'])
-#y_dy = np.append(y_dy, data_phone['y_velocity'][0])
-
-
-
-x_dy_fft = fft(x_dy)
-x_dy_fft = apply_lowpass_filter(x_dy_fft,fc)
-x_dy = np.real(ifft(x_dy_fft))
-x_dy = sig.savgol_filter(x_dy, window_length_savgol, polyorder_savgol)
-
-y_dy_fft = fft(y_dy)
-y_dy_fft = apply_lowpass_filter(y_dy_fft,fc)
-y_dy = np.real(ifft(y_dy_fft))
-y_dy = sig.savgol_filter(y_dy, window_length_savgol, polyorder_savgol)
-
-
-
-
-x_vel_dy = calculate_derivative_list(data_phone['timestamp'], x_dy) #np.diff(data_phone['x'])
-#x_dy = np.append(x_dy, data_phone['x_velocity'][0])
-
-
-
-y_vel_dy = calculate_derivative_list(data_phone['timestamp'], y_dy) #np.diff(data_phone['y'])
-#y_dy = np.append(y_dy, data_phone['y_velocity'][0])
-
-
-
-x_dy_fft = fft(x_vel_dy)
-x_dy_fft = apply_lowpass_filter(x_dy_fft,fc)
-x_vel_dy = np.real(ifft(x_dy_fft))
-x_vel_dy = sig.savgol_filter(x_vel_dy, window_length_savgol, polyorder_savgol)
-
-y_dy_fft = fft(y_vel_dy)
-y_dy_fft = apply_lowpass_filter(y_dy_fft,fc)
-y_vel_dy = np.real(ifft(y_dy_fft))
-y_vel_dy = sig.savgol_filter(y_vel_dy, window_length_savgol, polyorder_savgol)
-
-
-x_fft = fft(data_cmp['x_velocity'])
-x_fft = apply_lowpass_filter(x_fft,fc)
-x = np.real(ifft(x_fft))
-data_cmp['x_velocity'] = sig.savgol_filter(x, window_length_savgol, polyorder_savgol)
-
-y_fft = fft(data_cmp['y_velocity'])
-y_fft = apply_lowpass_filter(y_fft,fc)
-y = np.real(ifft(y_fft))
-data_cmp['y_velocity'] = sig.savgol_filter(y, window_length_savgol, polyorder_savgol)
-
-
-
-x_fft = fft(data_watch['x_acc'])
-x_fft = apply_lowpass_filter(x_fft,fc)
-x = np.real(ifft(x_fft))
-data_watch['x_acc'] = sig.savgol_filter(x, window_length_savgol, polyorder_savgol)
-
-
-
-y_fft = fft(data_watch['y_acc'])
-y_fft = apply_lowpass_filter(y_fft,fc)
-y = np.real(ifft(y_fft))
-data_watch['y_acc'] = sig.savgol_filter(y, window_length_savgol, polyorder_savgol)
-
-
-plt.plot(data_watch['x_acc'], data_watch['y_acc'])
-plt.figure()
-plt.plot(x_vel_dy, y_vel_dy)
-#plt.plot(data_phone['timestamp'], x_dy)
-
+#plt.plot(range(0, len(x_vel)), x_vel)
 #plt.figure()
-#plt.plot(x_dy, y_dy)
-
-x_acc = sig.resample(data_watch['x_acc'], len(x_vel_dy))
-y_acc = sig.resample(data_watch['y_acc'], len(y_vel_dy))
+#plt.plot(range(0, len(x_vel_filtered)), x_vel_filtered)
 
 
-watch_acc_greycode_2bit = grey_code_extraction_2bit(x_acc, y_acc)
+watch_vel_greycode_2bit = grey_code_extraction_2bit(x_vel, y_vel)
+phone_vel_greycode_2bit = grey_code_extraction_2bit(x_vel_filtered, y_vel_filtered)
 
-
-phone_acc_greycode_2bit = grey_code_extraction_2bit(x_vel_dy, y_vel_dy)
 match = 0
-
-for i in range(0, len(phone_acc_greycode_2bit)):
+for i in range(0, len(watch_vel_greycode_2bit)):
     #print(watch_acc_greycode_2bit[i], phone_acc_greycode_2bit[i])
-    if watch_acc_greycode_2bit[i] == phone_acc_greycode_2bit[i]:
+    if watch_vel_greycode_2bit[i] == phone_vel_greycode_2bit[i]:
         match += 1
 
-print(match / len(watch_acc_greycode_2bit))
+print(match / len(watch_vel_greycode_2bit))
 
-#plt.plot(range(0, len(data_watch['z_acc'][47:])), data_watch['z_acc'][47:])
-#plt.figure()
-#plt.plot(range(0, len(watch_linear_x_acc_lp_resampled)), watch_linear_x_acc_lp_resampled)
-#plt.figure()
-#plt.plot(range(0, len(x_dy)), x_dy)
-#print(data_watch['timestamp'][0], data_phone['timestamp'][31])
-#plt.figure()
-#plt.plot(range(0, len(data_watch['x_acc_fin'])), data_watch['x_acc_fin'])
-plt.show()
+# x_vel = cumtrapz(output)
+# x_vel = np.append([0], x_vel)
+# plt.plot(range(0, 50), x_vel[:50], label='vel')
+# x_pos = cumtrapz(x_vel[:50])
+# x_pos = np.append([0], x_pos)
+# y_pos = np.ones(50)
+# plt.plot(x_pos, y_pos, label='pos')
+# plt.legend()
+# plt.show()

@@ -39,7 +39,7 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
 
     // resulting string to write into a CSV file
     // Init: CSV file header
-    String to_write = "timestamp,x,y,x_velocity,y_velocity\n";
+    String to_write = "timestamp,x,y,x_velocity,y_velocity,x_velocity_filtered,y_velocity_filtered\n";
     String text_separator = ",";
 
     private VelocityTracker velocityTracker = null;
@@ -48,6 +48,9 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
     // needed for inch to meter conversion
     DisplayMetrics metrics = null;
     private final float inchToMeterRatio = (float) 39.3701;
+
+    private MeanFilter meanFilterVelocity;
+    private float[] velocity = new float[2];
 
 
     @Override
@@ -69,6 +72,8 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL);
         }
+        meanFilterVelocity = new MeanFilter();
+        meanFilterVelocity.setWindowSize(10);
     }
 
 
@@ -117,12 +122,19 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
 
                 double magnitude = calculateMagnitude(velocity_x,velocity_y);
 
+                velocity[0] = toMeterPerSecondsConversion(velocity_x, metrics.xdpi);
+                velocity[1] = toMeterPerSecondsConversion(velocity_y, metrics.ydpi);
+
+                float[] filtered_velocity = meanFilterVelocity.filterFloat(velocity);
+
                 updateView(velocity_x, velocity_y, max_velocity_x, max_velocity_y, magnitude);
                 to_write += System.currentTimeMillis() + text_separator +
                         x/metrics.xdpi/inchToMeterRatio + text_separator +
                         y/metrics.ydpi/inchToMeterRatio + text_separator +
-                        toMeterPerSecondsConversion(velocity_x, metrics.xdpi) + text_separator +
-                        toMeterPerSecondsConversion(velocity_y, metrics.ydpi) + "\n";
+                        velocity[0] + text_separator +
+                        velocity[1] + text_separator +
+                        filtered_velocity[0] + text_separator +
+                        filtered_velocity[1] + "\n";
                 break;
 
             case MotionEvent.ACTION_UP:
@@ -131,7 +143,7 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
                 velocityTracker.recycle();
                 velocityTracker = null;
                 writeToFile();
-                to_write = "timestamp,x,y,x_velocity,y_velocity\n";
+                to_write = "timestamp,x,y,x_velocity,y_velocity,x_velocity_filtered,y_velocity_filtered\n";
                 resetView();
                 break;
         }
