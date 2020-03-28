@@ -43,14 +43,9 @@ def grey_code_extraction_2bit(a, b):
         i += 1
     return bits_str
 
-# dictionary for the Grey-code extraction
-grey_code_dict =	{
-  '1': '01',
-  '0': '00',
-  '-1': '11'
-}
 # jump in terms of datapoint used for extracting the grey codedata_watch['x_acc_fin'][firstpeak_index:len(x_dy)]
 jump = 2
+threshold = 0.5
 vel_file_path = 'Test_Data/fusion_tests/type_acc_lin1/Drawing_Data/2020-03-24_1_smartphone_sample.csv'
 acc_file_path = 'Test_Data/fusion_tests/type_acc_lin1/Accelerometer_Data/2020-03-24_1_watch_sample.csv'
 
@@ -67,8 +62,8 @@ calib_vel = {'x_min':-0.03, 'y_min':-0.03, 'x_max': 0.03, 'y_max':0.03}
 #data_watch['y_acc'] -= data_watch['y_acc'].mean()
 
 
-x_vel_filtered = data_phone['x_velocity_filtered'] #sig.savgol_filter(data_phone['x_velocity'], window_length_savgol, polyorder_savgol)
-y_vel_filtered = data_phone['y_velocity_filtered'] * -1 #sig.savgol_filter(data_phone['y_velocity'], window_length_savgol, polyorder_savgol)
+x_vel_filtered = data_phone['x_velocity_filtered'].to_list() #sig.savgol_filter(data_phone['x_velocity'], window_length_savgol, polyorder_savgol)
+y_vel_filtered = (data_phone['y_velocity_filtered'] * -1).to_list() #sig.savgol_filter(data_phone['y_velocity'], window_length_savgol, polyorder_savgol)
 
 for i in range(0, len(data_watch['x_lin_acc'])):
      if data_watch['x_lin_acc'][i] <= calib_acc['x_max'] and data_watch['x_lin_acc'][i] >= calib_acc['x_min']:
@@ -87,20 +82,13 @@ for i in range(0, len(x_vel_filtered)):
          #print(data_wax_veltch['y_acc'][i])
          y_vel_filtered[i] = 0
 
-#output = sig.filtfilt(b, a, data_watch['x_acc'])
+
 #plt.plot(data_watch['timestamp'], output)
 #plt.figure()
 #plt.plot(data_watch['timestamp'], data_watch['x_lin_acc'], label='lin_acc')
 #plt.plot(data_watch['timestamp'], data_watch['x_acc'], label='acc')
-
-
 #plt.plot(range(0, len(data_watch['x_lin_acc'])), data_watch['x_lin_acc'])
 #plt.plot(range(0, len(x_vel_refined)), x_vel_refined)
-
-
-
-#x_vel_filtered[0] =  0.0
-#y_vel_filtered[0] =  0.0
 
 
 for i in range(0, len(data_watch['x_lin_acc'])):
@@ -123,18 +111,23 @@ for i in range(len(data_watch['y_lin_acc']) -1 , -1, -1):
         y_acc_end = i #print(i, len(data_watch['x_lin_acc']))
         break
 
-x_diff = x_acc_end - x_acc_start
-y_diff = y_acc_end - y_acc_start
-
-if x_diff > y_diff:
+if x_acc_start < y_acc_start:
     acc_start = x_acc_start
-    acc_end = x_acc_end
 else:
     acc_start = y_acc_start
+
+if x_acc_end > y_acc_end:
+    acc_end = x_acc_end
+else:
     acc_end = y_acc_end
 
-x_acc_filtered = data_watch['x_lin_acc'][acc_start - 2 : acc_end + 2]
-y_acc_filtered = data_watch['y_lin_acc'][acc_start - 2 : acc_end + 2]
+
+#plt.plot(range(0, len(data_watch['x_lin_acc'])), data_watch['x_lin_acc'])
+#plt.figure()
+#plt.plot(range(0, len(data_watch['y_lin_acc'])), data_watch['y_lin_acc'])
+#plt.figure()
+x_acc_filtered = data_watch['x_lin_acc'][acc_start - 2 : acc_end + 2].to_list()
+y_acc_filtered = data_watch['y_lin_acc'][acc_start - 2 : acc_end + 2].to_list()
 
 
 x_vel = cumtrapz(x_acc_filtered)
@@ -147,36 +140,53 @@ x_pos = cumtrapz(x_vel)
 y_vel = cumtrapz(y_acc_filtered)
 y_pos = cumtrapz(y_vel)
 
-#plt.plot(range(0, len(y_vel)), y_vel)
-#plt.figure()
+if len(y_vel_filtered) > len(y_vel) or len(x_vel_filtered) > len(x_vel):
+    print("Failure: Length error")
+    exit(0)
 
 #TODO: revisit
-
 y_vel = y_vel[:len(y_vel_filtered)]
 x_vel = x_vel[:len(x_vel_filtered)]
-
-#plt.plot(range(0, len(x_vel)), x_vel)
-#plt.figure()
-#plt.plot(range(0, len(x_vel_filtered)), x_vel_filtered)
-
 
 watch_vel_greycode_2bit = grey_code_extraction_2bit(x_vel, y_vel)
 phone_vel_greycode_2bit = grey_code_extraction_2bit(x_vel_filtered, y_vel_filtered)
 
-match = 0
+vel_match = 0
 for i in range(0, len(watch_vel_greycode_2bit)):
     #print(watch_acc_greycode_2bit[i], phone_acc_greycode_2bit[i])
     if watch_vel_greycode_2bit[i] == phone_vel_greycode_2bit[i]:
-        match += 1
+        vel_match += 1
 
-print(match / len(watch_vel_greycode_2bit))
+vel_match = vel_match / len(watch_vel_greycode_2bit)
 
-# x_vel = cumtrapz(output)
-# x_vel = np.append([0], x_vel)
-# plt.plot(range(0, 50), x_vel[:50], label='vel')
-# x_pos = cumtrapz(x_vel[:50])
-# x_pos = np.append([0], x_pos)
-# y_pos = np.ones(50)
-# plt.plot(x_pos, y_pos, label='pos')
-# plt.legend()
-# plt.show()
+if vel_match >= threshold:
+    print("Velocity - Success: " + str(vel_match))
+else:
+    print("Velocity - Failure: " + str(vel_match))
+
+
+x_acc = calculate_derivative_list(data_phone['timestamp'], x_vel_filtered)
+y_acc = calculate_derivative_list(data_phone['timestamp'], y_vel_filtered)
+
+
+watch_acc_greycode_2bit = grey_code_extraction_2bit(x_acc_filtered, y_acc_filtered)
+phone_acc_greycode_2bit = grey_code_extraction_2bit(x_acc, y_acc)
+
+acc_match = 0
+for i in range(0, len(phone_acc_greycode_2bit)):
+    #print(watch_acc_greycode_2bit[i], phone_acc_greycode_2bit[i])
+    if watch_acc_greycode_2bit[i] == phone_acc_greycode_2bit[i]:
+        acc_match += 1
+
+acc_match = acc_match / len(phone_acc_greycode_2bit)
+
+if acc_match >= threshold:
+    print("Acc - Success: " + str(acc_match))
+else:
+    print("Acc - Failure: " + str(acc_match))
+
+
+plt.plot(range(0, len(x_acc_filtered)), x_acc_filtered)
+plt.figure()
+plt.plot(range(0, len(x_vel_filtered)), x_vel_filtered)
+plt.show()
