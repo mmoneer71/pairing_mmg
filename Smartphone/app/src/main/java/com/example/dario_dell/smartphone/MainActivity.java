@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
@@ -18,7 +19,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
 
-public class MainActivity extends AppCompatActivity implements ViewWasTouchedListener {
+public class MainActivity extends AppCompatActivity implements ViewWasTouchedListener, Runnable {
 
     private TextView velocity_x_txtView, velocity_y_txtView,
             maxVelocity_x_txtView, maxVelocity_y_txtView, velocity_magnitude_txtView;
@@ -39,7 +40,7 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
 
     // resulting string to write into a CSV file
     // Init: CSV file header
-    String to_write = "timestamp,x,y,x_velocity,y_velocity,x_velocity_filtered,y_velocity_filtered\n";
+    String header = "seq_number,timestamp,x,y,x_velocity,y_velocity,x_velocity_filtered,y_velocity_filtered\n";
     String text_separator = ",";
 
     private VelocityTracker velocityTracker = null;
@@ -49,8 +50,14 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
     DisplayMetrics metrics = null;
     private final float inchToMeterRatio = (float) 39.3701;
 
+    private long logTime = 0;
+    private int generation = 0;
+
     private MeanFilter meanFilterVelocity;
-    private float[] velocity = new float[2];
+    private float[] position = new float[2], velocity = new float[2], filtered_velocity = new float[2];
+    private Handler handler;
+    private boolean logData = false;
+    private String log = "";
 
 
     @Override
@@ -72,10 +79,40 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL);
         }
+
+        handler = new Handler();
+        handler.post(this);
         meanFilterVelocity = new MeanFilter();
         meanFilterVelocity.setWindowSize(10);
     }
 
+
+    @Override
+    public void run() {
+        handler.postDelayed(this, 20);
+        logData();
+    }
+
+    private void logData() {
+        if (logData) {
+            if (generation == 0) {
+                logTime = System.currentTimeMillis();
+            }
+            log += generation++ + ",";
+            log += System.currentTimeMillis() - logTime + ",";
+
+            log += position[0] + ",";
+            log += position[1] + ",";
+            log += velocity[0] + ",";
+            log += velocity[1] + ",";
+            log += filtered_velocity[0] + ",";
+            log += filtered_velocity[1];
+
+            Log.d("Generation", String.valueOf(generation));
+            Log.d("Filtered Velocity", filtered_velocity[0] + " " + filtered_velocity[1]);
+            log += System.getProperty("line.separator");
+        }
+    }
 
     @Override
     //callback for updating the TextViews
@@ -103,6 +140,8 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
                 velocityTracker.addMovement(event);
                 max_velocity_x = 0;
                 max_velocity_y = 0;
+                logData = true;
+
                 resetView();
                 break;
 
@@ -122,19 +161,23 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
 
                 double magnitude = calculateMagnitude(velocity_x,velocity_y);
 
+                position[0] = x/metrics.xdpi/inchToMeterRatio;
+                position[1] = y/metrics.ydpi/inchToMeterRatio;
+
                 velocity[0] = toMeterPerSecondsConversion(velocity_x, metrics.xdpi);
                 velocity[1] = toMeterPerSecondsConversion(velocity_y, metrics.ydpi);
 
-                float[] filtered_velocity = meanFilterVelocity.filterFloat(velocity);
+                filtered_velocity = meanFilterVelocity.filterFloat(velocity);
 
                 updateView(velocity_x, velocity_y, max_velocity_x, max_velocity_y, magnitude);
-                to_write += System.currentTimeMillis() + text_separator +
+                /*to_write += generation++ + text_separator +
+                        (System.currentTimeMillis() - logTime) + text_separator +
                         x/metrics.xdpi/inchToMeterRatio + text_separator +
                         y/metrics.ydpi/inchToMeterRatio + text_separator +
                         velocity[0] + text_separator +
                         velocity[1] + text_separator +
                         filtered_velocity[0] + text_separator +
-                        filtered_velocity[1] + "\n";
+                        filtered_velocity[1] + "\n";*/
                 break;
 
             case MotionEvent.ACTION_UP:
@@ -143,7 +186,9 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
                 velocityTracker.recycle();
                 velocityTracker = null;
                 writeToFile();
-                to_write = "timestamp,x,y,x_velocity,y_velocity,x_velocity_filtered,y_velocity_filtered\n";
+                generation = 0;
+                log = "";
+                logData = false;
                 resetView();
                 break;
         }
@@ -197,6 +242,7 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
 
     //Method for writing to file after removing the finger form the screen
     private void writeToFile() {
+        String to_write = header + log;
         if (MainActivity.this.isExternalStorageWritable()){
             File path = new File (Environment.getExternalStoragePublicDirectory(
                     Environment.MEDIA_SHARED), folder_name);

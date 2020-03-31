@@ -70,7 +70,7 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
     private final int MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL = 1;
     private long logTime = 0;
     private int generation = 0;
-    private boolean logData = true;
+    private boolean logData = false;
     private Handler handler;
     // Output log
     private String log;
@@ -101,6 +101,7 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
 
 
         handler = new Handler();
+        registerListeners();
         log = "";
 
 
@@ -140,19 +141,24 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
     //unregister the sensor when the application hibernates
     protected void onPause() {
         super.onPause();
-        accelerationSensor.removeAccelerationObserver(this);
+        /*accelerationSensor.removeAccelerationObserver(this);
         accelerationSensor.removeAccelerationObserver(linearAccelerationSensor);
         gravitySensor.removeGravityObserver(linearAccelerationSensor);
         gyroscopeSensor.removeGyroscopeObserver(linearAccelerationSensor);
         magneticSensor.removeMagneticObserver(linearAccelerationSensor);
         linearAccelerationSensor.removeLinearAccelerationObserver(this);
-        handler.removeCallbacks(this);
+        handler.removeCallbacks(this);*/
         //senSensorManager.unregisterListener(this);
     }
 
     //register the sensor again when the application resumes
     protected void onResume() {
         super.onResume();
+        /*if (!justStarted)
+            senSensorManager.registerListener(this, senAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);*/
+    }
+
+    private void registerListeners() {
         handler.post(this);
         accelerationSensor.registerAccelerationObserver(this);
         accelerationSensor
@@ -162,8 +168,6 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         magneticSensor.registerMagneticObserver(linearAccelerationSensor);
 
         linearAccelerationSensor.registerLinearAccelerationObserver(this);
-        /*if (!justStarted)
-            senSensorManager.registerListener(this, senAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);*/
     }
 
 
@@ -186,6 +190,7 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
             return;
         }
         startBtn.setEnabled(true);
+        logData = true;
     }
 
     @Override
@@ -271,10 +276,7 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
     /* Taken from the Android official documentation */
     private boolean isExternalStorageWritable() {
         String state = Environment.getExternalStorageState();
-        if (Environment.MEDIA_MOUNTED.equals(state)) {
-            return true;
-        }
-        return false;
+        return Environment.MEDIA_MOUNTED.equals(state);
     }
 
     private int generateFilenameCounter(File path) {
