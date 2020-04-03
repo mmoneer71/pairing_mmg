@@ -185,7 +185,7 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         System.arraycopy(linearAcceleration, 0, this.linearAcceleration, 0,
                 linearAcceleration.length);
 
-        if (!linearAccelerationSensor.getFustionSystemStability()) {
+        if (!linearAccelerationSensor.getFusionSystemStability()) {
             Log.d("Calibration", "Still calibrating...");
             return;
         }

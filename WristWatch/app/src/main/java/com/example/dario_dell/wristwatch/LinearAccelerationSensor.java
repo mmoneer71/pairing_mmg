@@ -98,8 +98,7 @@ public class LinearAccelerationSensor implements GyroscopeSensorObserver,
     private ArrayList<LinearAccelerationSensorObserver> observersAngularVelocity;
 
     private boolean hasOrientation = false, hasMagnetic = false, isStable = false;
-
-    private long startTime = 0;
+    private int stabilitySampleCount = 0;
 
     private float dT = 0;
 
@@ -108,6 +107,8 @@ public class LinearAccelerationSensor implements GyroscopeSensorObserver,
     private float thetaOverTwo = 0;
     private float sinThetaOverTwo = 0;
     private float cosThetaOverTwo = 0;
+
+    private float noiseThreshold = 0.2f;
 
     // The gravity components of the acceleration signal.
     private float[] components = new float[3];
@@ -167,7 +168,6 @@ public class LinearAccelerationSensor implements GyroscopeSensorObserver,
     public LinearAccelerationSensor() {
         super();
 
-        startTime = System.currentTimeMillis();
 
         observersAngularVelocity = new ArrayList<LinearAccelerationSensorObserver>();
 
@@ -508,13 +508,6 @@ public class LinearAccelerationSensor implements GyroscopeSensorObserver,
 
     private void calculateLinearAcceleration() {
 
-        if (!isStable) {
-            long currentTime = System.currentTimeMillis();
-            if (currentTime - startTime > 10000) {
-                isStable = true;
-            }
-            return;
-        }
         System.arraycopy(gyroOrientation, 0, absoluteFrameOrientation, 0, 3);
 
         // values[0]: azimuth, rotation around the Z axis.
@@ -538,17 +531,39 @@ public class LinearAccelerationSensor implements GyroscopeSensorObserver,
                 * Math.cos(absoluteFrameOrientation[1]) * Math
                 .cos(absoluteFrameOrientation[2]));
 
+
+        float[] linearAcceleration = new float[3];
+
+
         // Subtract the gravity component of the signal
         // from the input acceleration signal to get the
         // tilt compensated output.
         linearAcceleration[0] = (this.acceleration[0] - components[0]);
         linearAcceleration[1] = (this.acceleration[1] - components[1]);
         linearAcceleration[2] = (this.acceleration[2] - components[2]);
+
+        if (!isStable) {
+
+            if (linearAcceleration[0] >= -noiseThreshold && linearAcceleration[0] <= noiseThreshold
+            && linearAcceleration[1] >= -noiseThreshold && linearAcceleration[1] <= noiseThreshold) {
+                ++stabilitySampleCount;
+            }
+            else {
+                stabilitySampleCount = 0;
+            }
+
+            if (stabilitySampleCount == 50) {
+                isStable = true;
+            }
+
+            return;
+        }
+
         this.linearAcceleration = meanFilterLinearAcceleration
-                .filterFloat(this.linearAcceleration);
+                .filterFloat(linearAcceleration);
     }
 
-    public boolean getFustionSystemStability() {
+    public boolean getFusionSystemStability() {
         return isStable;
     }
 
