@@ -32,8 +32,8 @@ def grey_code_extraction_2bit(a, b):
 jump = 2
 threshold = 0.5
 zeroes = [0.0, 0.0]
-vel_file_path = 'Test_Data/second_matching_tests/Drawing_Data/2020-04-03_1_smartphone_sample.csv'
-acc_file_path = 'Test_Data/second_matching_tests/Accelerometer_Data/2020-04-03_1_watch_sample.csv'
+vel_file_path = 'Test_Data/second_matching_tests/Drawing_Data/2020-04-05_2_smartphone_sample.csv'
+acc_file_path = 'Test_Data/second_matching_tests/Accelerometer_Data/2020-04-05_2_watch_sample.csv'
 
 
 # DataFrame collection from files
@@ -54,13 +54,6 @@ y_jerk = np.diff(y_acc_filtered)
 
 x_vel_filtered = data_phone['x_velocity_filtered'].to_list()
 y_vel_filtered = (data_phone['y_velocity_filtered'] * -1).to_list()
-
-plt.plot(range(0, len(x_jerk)), x_jerk)
-plt.figure()
-plt.plot(range(0, len(x_acc_filtered)), x_acc_filtered)
-plt.figure()
-plt.plot(data_phone['x'], data_phone['y'] * -1)
-plt.show()
 
 #Acceleration Noise filtering
 for i in range(0, len(x_acc_filtered)):
