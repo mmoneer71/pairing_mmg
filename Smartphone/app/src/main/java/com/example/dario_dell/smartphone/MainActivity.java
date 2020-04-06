@@ -89,7 +89,7 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
 
     @Override
     public void run() {
-        handler.postDelayed(this, 20);
+        handler.postDelayed(this, 30);
         logData();
     }
 

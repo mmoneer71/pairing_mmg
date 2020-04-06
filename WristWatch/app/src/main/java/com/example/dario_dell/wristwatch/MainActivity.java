@@ -101,7 +101,6 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
 
 
         handler = new Handler();
-        registerListeners();
         log = "";
 
 
@@ -141,24 +140,19 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
     //unregister the sensor when the application hibernates
     protected void onPause() {
         super.onPause();
-        /*accelerationSensor.removeAccelerationObserver(this);
+        accelerationSensor.removeAccelerationObserver(this);
         accelerationSensor.removeAccelerationObserver(linearAccelerationSensor);
         gravitySensor.removeGravityObserver(linearAccelerationSensor);
         gyroscopeSensor.removeGyroscopeObserver(linearAccelerationSensor);
         magneticSensor.removeMagneticObserver(linearAccelerationSensor);
         linearAccelerationSensor.removeLinearAccelerationObserver(this);
-        handler.removeCallbacks(this);*/
+        handler.removeCallbacks(this);
         //senSensorManager.unregisterListener(this);
     }
 
     //register the sensor again when the application resumes
     protected void onResume() {
         super.onResume();
-        /*if (!justStarted)
-            senSensorManager.registerListener(this, senAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);*/
-    }
-
-    private void registerListeners() {
         handler.post(this);
         accelerationSensor.registerAccelerationObserver(this);
         accelerationSensor
@@ -168,6 +162,8 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         magneticSensor.registerMagneticObserver(linearAccelerationSensor);
 
         linearAccelerationSensor.registerLinearAccelerationObserver(this);
+        /*if (!justStarted)
+            senSensorManager.registerListener(this, senAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);*/
     }
 
 

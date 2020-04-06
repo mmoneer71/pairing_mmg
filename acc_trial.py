@@ -30,49 +30,46 @@ def grey_code_extraction_2bit(a, b):
 
 # jump in terms of datapoint used for extracting the grey codedata_watch['x_acc_fin'][firstpeak_index:len(x_dy)]
 jump = 2
-threshold = 0.5
+threshold = 0.4
 zeroes = [0.0, 0.0]
-vel_file_path = 'Test_Data/second_matching_tests/Drawing_Data/2020-04-05_2_smartphone_sample.csv'
-acc_file_path = 'Test_Data/second_matching_tests/Accelerometer_Data/2020-04-05_2_watch_sample.csv'
+vel_file_path = 'Test_Data/second_matching_tests/Drawing_Data/2020-04-06_8_smartphone_sample.csv'
+acc_file_path = 'Test_Data/second_matching_tests/Accelerometer_Data/2020-04-06_7_watch_sample.csv'
 
 
 # DataFrame collection from files
 data_phone = pd.read_csv(vel_file_path, engine='python')
 data_watch = pd.read_csv(acc_file_path, engine='python')
-#-4.8085445E-4 -1.5577588E-4
-
-calib_acc = {'x_min':-0.2, 'y_min':-0.2, 'x_max': 0.2, 'y_max':0.2}
-calib_vel = {'x_min':-0.03, 'y_min':-0.03, 'x_max': 0.03, 'y_max':0.03}
-
 
 x_acc_filtered = data_watch['x_lin_acc'].to_list()
 y_acc_filtered = data_watch['y_lin_acc'].to_list()
 acc_magnitude = np.sqrt(np.power(x_acc_filtered, 2) + np.power(y_acc_filtered, 2))
 
-x_jerk = np.diff(x_acc_filtered)
-y_jerk = np.diff(y_acc_filtered)
-
 x_vel_filtered = data_phone['x_velocity_filtered'].to_list()
 y_vel_filtered = (data_phone['y_velocity_filtered'] * -1).to_list()
 
+noise_factor = 4
+calib_acc = {'min': min(min(x_acc_filtered) / noise_factor, min(y_acc_filtered) / noise_factor),
+             'max': max(max(x_acc_filtered) / noise_factor, max(y_acc_filtered) / noise_factor)}
+
+calib_vel = 0.03
+
 #Acceleration Noise filtering
 for i in range(0, len(x_acc_filtered)):
-     if x_acc_filtered[i] <= calib_acc['x_max'] and x_acc_filtered[i] >= calib_acc['x_min']:
+     if x_acc_filtered[i] <= calib_acc['max'] and x_acc_filtered[i] >= calib_acc['min']:
          #print(data_watch['x_acc'][i])
          x_acc_filtered[i] = 0
-     if y_acc_filtered[i] <= calib_acc['y_max'] and y_acc_filtered[i] >= calib_acc['y_min']:
+     if y_acc_filtered[i] <= calib_acc['max'] and y_acc_filtered[i] >= calib_acc['min']:
          #print(data_watch['y_acc'][i])
          y_acc_filtered[i] = 0
 
 
 
-
 #Velocity Noise filtering
 for i in range(0, len(x_vel_filtered)):
-     if x_vel_filtered[i] <= calib_vel['x_max'] and x_vel_filtered[i] >= calib_vel['x_min']:
+     if x_vel_filtered[i] <= calib_vel and x_vel_filtered[i] >= -calib_vel:
          #print(data_watch['x_acc'][i])
          x_vel_filtered[i] = 0
-     if y_vel_filtered[i] <= calib_vel['y_max'] and y_vel_filtered[i] >= calib_vel['y_min']:
+     if y_vel_filtered[i] <= calib_vel and y_vel_filtered[i] >= -calib_vel:
          #print(data_wax_veltch['y_acc'][i])
          y_vel_filtered[i] = 0
 
@@ -128,19 +125,12 @@ y_vel_final = sig.resample(y_vel_filtered, len(y_vel))
 #Velocity Noise filtering
 #TODO: 
 for i in range(0, len(x_vel_final)):
-     if x_vel_final[i] <= calib_vel['x_max'] and x_vel_final[i] >= calib_vel['x_min']:
+     if x_vel_final[i] <= calib_vel and x_vel_final[i] >= -calib_vel:
          #print(data_watch['x_acc'][i])
          x_vel_final[i] = 0
-     if y_vel_final[i] <= calib_vel['y_max'] and y_vel_final[i] >= calib_vel['y_min']:
+     if y_vel_final[i] <= calib_vel and y_vel_final[i] >= -calib_vel:
          #print(data_wax_veltch['y_acc'][i])
          y_vel_final[i] = 0
-
-
-#plt.figure()
-
-
-#plt.figure()
-#plt.plot(range(0, len(x_vel_filtered)), x_vel_filtered)
 
 watch_vel_greycode_2bit = grey_code_extraction_2bit(x_vel, y_vel)
 phone_vel_greycode_2bit = grey_code_extraction_2bit(x_vel_final, y_vel_final)
@@ -159,10 +149,16 @@ else:
     print("Velocity - Failure: " + str(vel_match))
 
 
-#TODO: Check issues with acceleration
 ###################################Acceleration######################################
 x_acc = np.diff(x_vel_filtered)
 y_acc = np.diff(y_vel_filtered)
+
+
+x_acc = sig.resample(x_acc, len(x_acc_filtered))
+y_acc = sig.resample(y_acc, len(y_acc_filtered))
+
+
+
 watch_acc_greycode_2bit = grey_code_extraction_2bit(x_acc_filtered, y_acc_filtered)
 phone_acc_greycode_2bit = grey_code_extraction_2bit(x_acc, y_acc)
 
