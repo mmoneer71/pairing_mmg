@@ -1,6 +1,11 @@
 package com.example.dario_dell.smartphone;
 
 import android.Manifest;
+import android.bluetooth.BluetoothDevice;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
@@ -18,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.Set;
 
 public class MainActivity extends AppCompatActivity implements ViewWasTouchedListener, Runnable {
 
@@ -37,6 +43,11 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
     // Request code for external write permission
     private final int MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL = 1;
     private final static String TAG = "SMARTPHONE_APP";
+
+
+    private ConnManager connManager;
+    private final int REQUEST_ENABLE_BT = 1;
+    private final static String SMARTWATCH_NAME = "TicWatch Pro 0306";
 
     // resulting string to write into a CSV file
     // Init: CSV file header
@@ -74,17 +85,22 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
         drawing.setWasTouchedListener(this);
         resetView();
 
-        if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL);
-        }
 
         handler = new Handler();
         handler.post(this);
         meanFilterVelocity = new MeanFilter();
         meanFilterVelocity.setWindowSize(10);
+
+        connManager = new ConnManager();
+        checkExternalWritePermission();
+        initBluetooth();
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+    }
+
 
 
     @Override
@@ -111,6 +127,14 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
             Log.d("Generation", String.valueOf(generation));
             Log.d("Filtered Velocity", filtered_velocity[0] + " " + filtered_velocity[1]);
             log += System.getProperty("line.separator");
+        }
+    }
+
+    private void checkExternalWritePermission() {
+        if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL);
         }
     }
 
@@ -303,5 +327,27 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
         //return velocity*inchToMeterRatio/dpi;   // wrong conversion imo
         return velocity/dpi/inchToMeterRatio;   // old wrong version as per Dario
     }
+
+    private void initBluetooth() {
+        // Register for broadcasts when a device is discovered.
+        Intent enableBtIntent = connManager.checkIfEnabled();
+        if (enableBtIntent != null) {
+            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        }
+
+        Set<BluetoothDevice> pairedDevices = connManager.getBluetoothAdapter().getBondedDevices();
+
+        if (pairedDevices.size() > 0) {
+            // There are paired devices. Get the name and address of each paired device.
+            for (BluetoothDevice device : pairedDevices) {
+                if (device.getName().equals(SMARTWATCH_NAME)) {
+                    Log.d(TAG, "smartwatch found");
+                    connManager.connect(device);
+                }
+            }
+        }
+
+    }
+
 
 }

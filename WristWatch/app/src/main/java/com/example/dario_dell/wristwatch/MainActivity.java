@@ -1,6 +1,7 @@
 package com.example.dario_dell.wristwatch;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
@@ -68,6 +69,7 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
 
 
     private final int MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL = 1;
+    private final int REQUEST_ENABLE_BT = 1;
     private long logTime = 0;
     private int generation = 0;
     private boolean logData = false;
@@ -81,6 +83,8 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
     private GyroscopeSensor gyroscopeSensor;
     private MagneticSensor magneticSensor;
     private LinearAccelerationSensor linearAccelerationSensor;
+
+    private ConnManager connManager;
 
 
     @Override
@@ -103,13 +107,10 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         handler = new Handler();
         log = "";
 
+        checkExternalWritePermission();
 
-        if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL);
-        }
-
+        connManager = new ConnManager();
+        initBluetooth();
 
         startBtn = findViewById(R.id.startBtn);
         startBtn.setOnClickListener(new View.OnClickListener() {
@@ -117,22 +118,6 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
                 writeToFile();
                 log = "";
                 logData = false;
-                /*if (isStart){
-                    instructionsTxtView.setVisibility(View.INVISIBLE);
-					goTxtView.setVisibility(View.VISIBLE);
-                    startBtn.setText("STOP");
-
-
-                } else {
-                    //View update
-                    startBtn.setText("START");
-                    instructionsTxtView.setVisibility(View.VISIBLE);
-                    waitTxtView.setVisibility(View.INVISIBLE);
-                    goTxtView.setVisibility(View.INVISIBLE);
-                    logData = false;
-
-                }
-                isStart = !isStart;*/
             }
         });
     }
@@ -195,6 +180,15 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         logData();
     }
 
+    private void checkExternalWritePermission() {
+        if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL);
+        }
+
+    }
+
     private void logData() {
         if (logData) {
             if (generation == 0) {
@@ -211,8 +205,8 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
             log += linearAcceleration[1] + ",";
             log += linearAcceleration[2];
 
-            Log.d("Generation", String.valueOf(generation));
-            Log.d("Fused Linear Acceleration", linearAcceleration[0] + " " + linearAcceleration[1]  + " " + linearAcceleration[2]);
+            //Log.d("Generation", String.valueOf(generation));
+            //Log.d("Fused Linear Acceleration", linearAcceleration[0] + " " + linearAcceleration[1]  + " " + linearAcceleration[2]);
             log += System.getProperty("line.separator");
         }
     }
@@ -295,4 +289,13 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         return ++filename_counter;
     }
 
+
+    private void initBluetooth() {
+        // Register for broadcasts when a device is discovered.
+        Intent enableBtIntent = connManager.checkIfEnabled();
+        if (enableBtIntent != null) {
+            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        }
+        connManager.accept();
+    }
 }

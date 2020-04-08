@@ -1,4 +1,4 @@
 <resources>
-    <string name="title">Shake it!</string>
-    <string name="instructions">Tap the button and wait 1s before shaking!</string>
+    <string name="title">Dp-mmg Pairing</string>
+    <string name="instructions">Please wait, pairing in progress. Hit the button when done.</string>
 </resources>
