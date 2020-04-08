@@ -12,6 +12,8 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.BigInteger;
+import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 
 class ConnManager {
@@ -24,6 +26,7 @@ class ConnManager {
 
     private BluetoothAdapter bluetoothAdapter;
     private Handler handler; // handler that gets info from Bluetooth service
+    private CryptUtils cryptUtils;
 
     // Defines several constants used when transmitting messages between the
     // service and the UI.
@@ -38,6 +41,7 @@ class ConnManager {
     ConnManager() {
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         handler = new Handler();
+        cryptUtils = new CryptUtils();
     }
     Intent checkIfEnabled() {
         if (!getBluetoothAdapter().isEnabled()) {
@@ -138,8 +142,26 @@ class ConnManager {
         }
 
         public void run() {
-            mmBuffer = new byte[1024];
-            mmBuffer = "hello".getBytes();
+            try {
+                cryptUtils.initDHParams();
+            } catch (NoSuchAlgorithmException e) {
+                Log.e(TAG, "Error occurred when creating the Diffie-Hellman params", e);
+            }
+            byte[] g = cryptUtils.getG().toByteArray();
+            byte[] p = cryptUtils.getG().toByteArray();
+            byte[] pubKey = cryptUtils.getPubKeyClient().toByteArray();
+
+            mmBuffer = new byte[g.length + p.length + pubKey.length];
+            /*
+            // create a destination array that is the size of the two arrays
+            byte[] destination = new byte[ciphertext.length + mac.length];
+
+            // copy ciphertext into start of destination (from pos 0, copy ciphertext.length bytes)
+            System.arraycopy(ciphertext, 0, destination, 0, ciphertext.length);
+
+            // copy mac into end of destination (from pos ciphertext.length, copy mac.length bytes)
+            System.arraycopy(mac, 0, destination, ciphertext.length, mac.length);
+             */
             write(mmBuffer);
             read();
         }
