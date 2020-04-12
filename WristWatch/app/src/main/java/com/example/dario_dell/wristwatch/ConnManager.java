@@ -15,6 +15,7 @@ import java.io.OutputStream;
 import java.math.BigInteger;
 import java.util.UUID;
 
+import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
 class ConnManager {
@@ -28,7 +29,7 @@ class ConnManager {
     private BluetoothAdapter bluetoothAdapter;
     private Handler handler; // handler that gets info from Bluetooth service
     private CryptUtils cryptUtils;
-    private SecretKeySpec sessionKey;
+    private boolean keyExchangeDone;
 
     // Defines several constants used when transmitting messages between the
     // service and the UI.
@@ -44,6 +45,7 @@ class ConnManager {
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         handler = new Handler();
         cryptUtils = new CryptUtils();
+        keyExchangeDone = false;
     }
     Intent checkIfEnabled() {
         if (!getBluetoothAdapter().isEnabled()) {
@@ -55,6 +57,8 @@ class ConnManager {
     private BluetoothAdapter getBluetoothAdapter() {
         return bluetoothAdapter;
     }
+
+    boolean isKeyExchangeDone() {return keyExchangeDone; }
 
     void accept() {
         new AcceptThread().start();
@@ -146,6 +150,8 @@ class ConnManager {
 
         public void run() {
 
+
+            // Initiate DH exchange
             cryptUtils.setDHParams();
 
             BigInteger gX = cryptUtils.genKeyPair();
@@ -160,14 +166,11 @@ class ConnManager {
             mmBuffer = gX.toByteArray();
             write(mmBuffer);
 
-            sessionKey = cryptUtils.computeSessionKey(gY);
 
+            // Generate Session Key
+            cryptUtils.computeSessionKey(gY);
+            keyExchangeDone = true;
 
-            if (sessionKey != null) {
-                Log.i(TAG, new String(sessionKey.getEncoded()));
-            }
-
-            read();
         }
 
         private void read() {

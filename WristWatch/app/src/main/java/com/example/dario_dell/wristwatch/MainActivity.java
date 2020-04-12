@@ -55,6 +55,7 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
     private float[] acceleration = new float[3];
     // https://stackoverflow.com/questions/15158769/android-acceleration-direction
     private float[] linearAcceleration = new float[3];
+    private boolean isStable = false;
     private long curTime = 0;
     private int samplesCount = 0;
     private float x_calibration = 0, y_calibration = 0, z_calibration = 0;
@@ -166,17 +167,15 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         System.arraycopy(linearAcceleration, 0, this.linearAcceleration, 0,
                 linearAcceleration.length);
 
-        if (!linearAccelerationSensor.getFusionSystemStability()) {
-            Log.d("Calibration", "Still calibrating...");
-            return;
-        }
-        startBtn.setEnabled(true);
-        logData = true;
+
     }
 
     @Override
     public void run() {
         handler.postDelayed(this, 20);
+        if (!isStable) {
+            checkStability();
+        }
         logData();
     }
 
@@ -187,6 +186,18 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
                     MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL);
         }
 
+    }
+
+    private void checkStability() {
+        if (!linearAccelerationSensor.getFusionSystemStability() ||
+                !connManager.isKeyExchangeDone()) {
+            Log.d("Calibration", "Still calibrating...");
+            return;
+        }
+        startBtn.setEnabled(true);
+        logData = true;
+        instructionsTxtView.setText(R.string.drawing);
+        isStable = true;
     }
 
     private void logData() {

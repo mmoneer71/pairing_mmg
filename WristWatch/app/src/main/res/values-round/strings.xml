@@ -1,4 +1,5 @@
 <resources>
     <string name="title">Dp-mmg Pairing</string>
-    <string name="instructions">Please wait, pairing in progress. Hit the button when done.</string>
+    <string name="instructions">Please wait, Initializing.</string>
+    <string name="drawing">Start drawing on your phone\'s screen now.</string>
 </resources>

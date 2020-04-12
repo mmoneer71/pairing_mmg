@@ -8,9 +8,12 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.Random;
 
+import javax.crypto.Cipher;
 import javax.crypto.spec.DHParameterSpec;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 public class CryptUtils {
@@ -18,7 +21,7 @@ public class CryptUtils {
 
     private final static String TAG = "CryptUtils";
     // Key size
-    public static final int KEY_SIZE = 1024;
+    static final int KEY_SIZE = 1024;
     // Generator: Has to be primitive root
     private BigInteger g;
     // Prime value
@@ -27,6 +30,8 @@ public class CryptUtils {
     private BigInteger pub;
     // Private key component
     private BigInteger priv;
+    // Current session Key
+    private SecretKeySpec sessionKey;
 
     // Parameters extraction based on:
     // https://stackoverflow.com/questions/19323178/how-to-do-diffie-hellman-key-generation-and-retrieve-raw-key-bytes-in-java
@@ -69,6 +74,11 @@ public class CryptUtils {
     }
 
     SecretKeySpec computeSessionKey(BigInteger pubComponent) {
+
+        if (sessionKey != null) {
+            return sessionKey;
+        }
+
         try {
             // Compute the key: dhKey = (dh_pubComponent ^ dh_privKey) mod dh_P
             BigInteger dhKey = pubComponent.modPow(this.priv, this.p);
@@ -78,12 +88,46 @@ public class CryptUtils {
             byte[] dhKeyComp = digest.digest(dhKey.toByteArray());
 
             // Return an AES-256 key
-            return new SecretKeySpec(dhKeyComp, "AES");
+            sessionKey = new SecretKeySpec(dhKeyComp, "AES");
+
+            return sessionKey;
+
         } catch (NoSuchAlgorithmException e) {
             Log.e(TAG, "Error occurred when generating the session key", e);
             return null;
         }
 
     }
+
+    public String crypt(String msg, SecretKeySpec key, int mode) {
+        try {
+            // Set the cipher with the crypto primitive (AES), mode of operation (CBC) and padding scheme (PKCS5PADDING)
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+
+            // Set the initialization vector for CBC
+            byte[] ivBytes = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+            IvParameterSpec iv = new IvParameterSpec(ivBytes);
+
+            // Initialize the cipher with the symmetric key and initialization vector
+            cipher.init(mode, key, iv);
+
+            // Do the encryption and return the ciphertext encoded into a Base64 string
+            // Or do the decryption and return the plaintext
+            switch (mode) {
+                case Cipher.ENCRYPT_MODE:
+                    byte[] msgEncrypted = cipher.doFinal(msg.getBytes());
+                    return Base64.getEncoder().encodeToString(msgEncrypted);
+                case Cipher.DECRYPT_MODE:
+                    byte[] msgDecrypted = cipher.doFinal(Base64.getDecoder().decode(msg));
+                    return new String(msgDecrypted);
+            }
+        }
+        catch (Exception e) {
+            Log.e(TAG, "Error occurred during encryption/decryption", e);
+            return null;
+        }
+        return null;
+    }
+
 
 }
