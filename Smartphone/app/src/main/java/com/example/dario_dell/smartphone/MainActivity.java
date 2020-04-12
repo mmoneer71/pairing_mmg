@@ -23,6 +23,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 public class MainActivity extends AppCompatActivity implements ViewWasTouchedListener, Runnable {
@@ -69,6 +71,7 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
     private Handler handler;
     private boolean logData = false;
     private String log = "";
+    List<Float> x_velocity, y_velocity;
 
 
     @Override
@@ -90,6 +93,8 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
         handler.post(this);
         meanFilterVelocity = new MeanFilter();
         meanFilterVelocity.setWindowSize(10);
+        x_velocity = new ArrayList<>();
+        y_velocity = new ArrayList<>();
 
         connManager = new ConnManager();
         checkExternalWritePermission();
@@ -114,6 +119,10 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
             if (generation == 0) {
                 logTime = System.currentTimeMillis();
             }
+
+            x_velocity.add(filtered_velocity[0]);
+            y_velocity.add(filtered_velocity[1]);
+
             log += generation++ + ",";
             log += System.currentTimeMillis() - logTime + ",";
 
@@ -123,9 +132,6 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
             log += velocity[1] + ",";
             log += filtered_velocity[0] + ",";
             log += filtered_velocity[1];
-
-            Log.d("Generation", String.valueOf(generation));
-            Log.d("Filtered Velocity", filtered_velocity[0] + " " + filtered_velocity[1]);
             log += System.getProperty("line.separator");
         }
     }
@@ -194,14 +200,6 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
                 filtered_velocity = meanFilterVelocity.filterFloat(velocity);
 
                 updateView(velocity_x, velocity_y, max_velocity_x, max_velocity_y, magnitude);
-                /*to_write += generation++ + text_separator +
-                        (System.currentTimeMillis() - logTime) + text_separator +
-                        x/metrics.xdpi/inchToMeterRatio + text_separator +
-                        y/metrics.ydpi/inchToMeterRatio + text_separator +
-                        velocity[0] + text_separator +
-                        velocity[1] + text_separator +
-                        filtered_velocity[0] + text_separator +
-                        filtered_velocity[1] + "\n";*/
                 break;
 
             case MotionEvent.ACTION_UP:
@@ -209,10 +207,13 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
                 velocityTracker.addMovement(event);
                 velocityTracker.recycle();
                 velocityTracker = null;
+                connManager.setNoisyInput(x_velocity, y_velocity);
                 writeToFile();
                 generation = 0;
                 log = "";
                 logData = false;
+                x_velocity.clear();
+                y_velocity.clear();
                 resetView();
                 break;
         }

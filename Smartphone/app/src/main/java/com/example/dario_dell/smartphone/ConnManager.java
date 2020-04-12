@@ -13,10 +13,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
-import javax.crypto.Cipher;
-import javax.crypto.spec.SecretKeySpec;
 
 class ConnManager {
 
@@ -26,13 +26,15 @@ class ConnManager {
     private Handler handler; // handler that gets info from Bluetooth service
     private CryptUtils cryptUtils;
     private boolean keyExchangeDone;
+    private List<Float> noisyInputX, noisyInputY;
+    private long startTime, deltaT1, deltaT2;
 
     // Defines several constants used when transmitting messages between the
     // service and the UI.
     private interface MessageConstants {
-        public static final int MESSAGE_READ = 0;
-        public static final int MESSAGE_WRITE = 1;
-        public static final int MESSAGE_TOAST = 2;
+        int MESSAGE_READ = 0;
+        int MESSAGE_WRITE = 1;
+        int MESSAGE_TOAST = 2;
 
         // ... (Add other message types here as needed.)
     }
@@ -57,6 +59,18 @@ class ConnManager {
 
     void connect(BluetoothDevice device) {
         new ConnectThread(device).start();
+    }
+
+    void setNoisyInput(List<Float>xVel, List<Float> yVel) {
+        this.noisyInputX = new ArrayList<>(xVel);
+        this.noisyInputY = new ArrayList<>(yVel);
+        initTimers();
+    }
+
+    private void initTimers() {
+        startTime = System.currentTimeMillis();
+        deltaT1 = 5000;
+        deltaT2 = 5000;
     }
 
     boolean isKeyExchangeDone() {return keyExchangeDone; }

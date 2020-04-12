@@ -20,6 +20,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends WearableActivity implements AccelerationSensorObserver, LinearAccelerationSensorObserver, Runnable{
 
@@ -86,6 +88,7 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
     private LinearAccelerationSensor linearAccelerationSensor;
 
     private ConnManager connManager;
+    List<Float> x_lin_acc, y_lin_acc;
 
 
     @Override
@@ -113,12 +116,19 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         connManager = new ConnManager();
         initBluetooth();
 
+        x_lin_acc = new ArrayList<>();
+        y_lin_acc = new ArrayList<>();
+
         startBtn = findViewById(R.id.startBtn);
         startBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
+
+                connManager.setNoisyInput(x_lin_acc, y_lin_acc);
                 writeToFile();
                 log = "";
                 logData = false;
+                x_lin_acc.clear();
+                y_lin_acc.clear();
             }
         });
     }
@@ -205,6 +215,10 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
             if (generation == 0) {
                 logTime = System.currentTimeMillis();
             }
+
+
+            x_lin_acc.add(linearAcceleration[0]);
+            y_lin_acc.add(linearAcceleration[1]);
 
             log += generation++ + ",";
             log += System.currentTimeMillis() - logTime + ",";
