@@ -12,7 +12,10 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.BigInteger;
 import java.util.UUID;
+
+import javax.crypto.spec.SecretKeySpec;
 
 class ConnManager {
 
@@ -20,6 +23,8 @@ class ConnManager {
     private final static String TAG = "ConnectionManager";
     private final static String UUID_STRING = "f6b42a90-79a7-11ea-bc55-0242ac130003";
     private Handler handler; // handler that gets info from Bluetooth service
+    private CryptUtils cryptUtils;
+    private SecretKeySpec sessionKey;
 
     // Defines several constants used when transmitting messages between the
     // service and the UI.
@@ -35,6 +40,7 @@ class ConnManager {
     ConnManager() {
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         handler = new Handler();
+        cryptUtils = new CryptUtils();
     }
     Intent checkIfEnabled() {
         if (!getBluetoothAdapter().isEnabled()) {
@@ -132,9 +138,25 @@ class ConnManager {
         }
 
         public void run() {
-            mmBuffer = new byte[5];
+
+            cryptUtils.setDHParams();
+            BigInteger gX = cryptUtils.genKeyPair();
+            mmBuffer = gX.toByteArray();
+            write(mmBuffer);
+
+            int sizeInBytes = CryptUtils.KEY_SIZE / 8;
+            mmBuffer = new byte[sizeInBytes];
             read();
-            Log.i(TAG, new String(mmBuffer));
+            BigInteger gY = new BigInteger(mmBuffer);
+            sessionKey = cryptUtils.computeSessionKey(gY);
+
+
+            if (sessionKey != null) {
+                Log.i(TAG, new String(sessionKey.getEncoded()));
+            }
+
+            read();
+
         }
 
         private void read() {
@@ -155,7 +177,7 @@ class ConnManager {
         }
 
         // Call this from the main activity to send data to the remote device.
-        public void write(byte[] bytes) {
+        private void write(byte[] bytes) {
             try {
                 mmOutStream.write(bytes);
 
@@ -176,6 +198,7 @@ class ConnManager {
                 handler.sendMessage(writeErrorMsg);
             }
         }
+
 
         // Call this method from the main activity to shut down the connection.
         public void cancel() {

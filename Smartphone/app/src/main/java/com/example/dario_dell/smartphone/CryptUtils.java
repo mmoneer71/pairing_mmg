@@ -1,5 +1,4 @@
-package com.example.dario_dell.wristwatch;
-
+package com.example.dario_dell.smartphone;
 
 import android.util.Log;
 

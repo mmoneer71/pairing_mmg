@@ -13,8 +13,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
-import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
+
+import javax.crypto.spec.SecretKeySpec;
 
 class ConnManager {
 
@@ -27,6 +28,7 @@ class ConnManager {
     private BluetoothAdapter bluetoothAdapter;
     private Handler handler; // handler that gets info from Bluetooth service
     private CryptUtils cryptUtils;
+    private SecretKeySpec sessionKey;
 
     // Defines several constants used when transmitting messages between the
     // service and the UI.
@@ -92,6 +94,7 @@ class ConnManager {
 
                     Log.i(TAG, "Connected.");
                     new ConnectedThread(socket).start();
+                    break;
                     /*try {
                         mmServerSocket.close();
                         break;
@@ -142,27 +145,28 @@ class ConnManager {
         }
 
         public void run() {
-            try {
-                cryptUtils.initDHParams();
-            } catch (NoSuchAlgorithmException e) {
-                Log.e(TAG, "Error occurred when creating the Diffie-Hellman params", e);
-            }
-            byte[] g = cryptUtils.getG().toByteArray();
-            byte[] p = cryptUtils.getG().toByteArray();
-            byte[] pubKey = cryptUtils.getPubKeyClient().toByteArray();
 
-            mmBuffer = new byte[g.length + p.length + pubKey.length];
-            /*
-            // create a destination array that is the size of the two arrays
-            byte[] destination = new byte[ciphertext.length + mac.length];
+            cryptUtils.setDHParams();
 
-            // copy ciphertext into start of destination (from pos 0, copy ciphertext.length bytes)
-            System.arraycopy(ciphertext, 0, destination, 0, ciphertext.length);
+            BigInteger gX = cryptUtils.genKeyPair();
 
-            // copy mac into end of destination (from pos ciphertext.length, copy mac.length bytes)
-            System.arraycopy(mac, 0, destination, ciphertext.length, mac.length);
-             */
+            int sizeInBytes = CryptUtils.KEY_SIZE / 8;
+            mmBuffer = new byte[sizeInBytes];
+
+            read();
+            BigInteger gY = new BigInteger(mmBuffer);
+
+
+            mmBuffer = gX.toByteArray();
             write(mmBuffer);
+
+            sessionKey = cryptUtils.computeSessionKey(gY);
+
+
+            if (sessionKey != null) {
+                Log.i(TAG, new String(sessionKey.getEncoded()));
+            }
+
             read();
         }
 
@@ -183,8 +187,8 @@ class ConnManager {
 
         }
 
-        // Call this from the main activity to send data to the remote device.
-        void write(byte[] bytes) {
+
+        private void write(byte[] bytes) {
             try {
                 mmOutStream.write(bytes);
 
@@ -205,6 +209,7 @@ class ConnManager {
                 handler.sendMessage(writeErrorMsg);
             }
         }
+
 
         // Call this method from the main activity to shut down the connection.
         public void cancel() {
