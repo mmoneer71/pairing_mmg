@@ -16,6 +16,10 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
+import android.view.View;
+import android.view.WindowManager;
+import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import java.io.File;
@@ -30,8 +34,9 @@ import java.util.Set;
 public class MainActivity extends AppCompatActivity implements ViewWasTouchedListener, Runnable {
 
     private TextView velocity_x_txtView, velocity_y_txtView,
-            maxVelocity_x_txtView, maxVelocity_y_txtView, velocity_magnitude_txtView;
+            maxVelocity_x_txtView, maxVelocity_y_txtView, velocity_magnitude_txtView, pleaseWaitTxtView;
     private DrawingView drawing;
+    private ProgressBar progressBar;
 
     //needed for providing unique names to the files
     private int filename_counter = 0;
@@ -72,6 +77,7 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
     private boolean logData = false;
     private String log = "";
     List<Float> x_velocity, y_velocity;
+    private boolean isInitialized = false;
 
 
     @Override
@@ -84,6 +90,8 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
         maxVelocity_x_txtView = findViewById(R.id.maxvelocityx);
         maxVelocity_y_txtView = findViewById(R.id.maxvelocityy);
         velocity_magnitude_txtView = findViewById(R.id.velocity_magnitude);
+        progressBar = findViewById(R.id.indeterminateBar);
+        pleaseWaitTxtView = findViewById(R.id.pleaseWait);
         drawing = findViewById(R.id.drawing);
         drawing.setWasTouchedListener(this);
         resetView();
@@ -99,6 +107,7 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
         connManager = new ConnManager();
         checkExternalWritePermission();
         initBluetooth();
+        initProgressBar();
     }
 
     @Override
@@ -111,7 +120,26 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
     @Override
     public void run() {
         handler.postDelayed(this, 30);
+        if (!isInitialized) {
+            checkInitProgress();
+            isInitialized = true;
+        }
+
         logData();
+    }
+
+    private void checkInitProgress() {
+        if (connManager.isKeyExchangeDone()) {
+            progressBar.setVisibility(View.GONE);
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+            pleaseWaitTxtView.setVisibility(View.GONE);
+        }
+    }
+
+    private void initProgressBar() {
+        progressBar.setVisibility(View.VISIBLE);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
     }
 
     private void logData() {
