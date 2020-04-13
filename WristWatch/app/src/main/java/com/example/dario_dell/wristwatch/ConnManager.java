@@ -231,7 +231,11 @@ class ConnManager {
             // Send commitment opening
             write(myCommitmentOpening);
 
-            Log.d(TAG, "Commitment sent successfully with no errors");
+            // Decrypt and verify other device's commitment opening
+            if (cryptUtils.verifyCommitment(mmBuffer, otherCommitment, uniqueID)) {
+                Log.i(TAG, "Commitment verification succeeded!");
+            }
+
         }
 
         private void read() {

@@ -8,6 +8,7 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
@@ -26,6 +27,8 @@ public class CryptUtils {
     static final int KEY_SIZE = 1024;
     // Hash function output size
     static final int HASH_SIZE = 512;
+    // Unique ID byte size
+    static final int ID_SIZE = 288;
     // Generator: Has to be primitive root
     private BigInteger g;
     // Prime value
@@ -79,12 +82,11 @@ public class CryptUtils {
         return this.pub;
     }
 
-    private BigInteger genNonce() {
+    private void genNonce() {
         do {
             nonce = new BigInteger(KEY_SIZE, (new Random()));
         } while (nonce.toByteArray().length != KEY_SIZE / 8);
 
-        return nonce;
     }
 
     SecretKeySpec computeSessionKey(BigInteger pubComponent) {
@@ -125,8 +127,8 @@ public class CryptUtils {
     }
 
     byte[] genCommitment(String id,
-                                List<Float>noisyInputX,
-                                List<Float>noisyInputY) {
+                         List<Float>noisyInputX,
+                         List<Float>noisyInputY) {
 
         int n = noisyInputX.size();
 
@@ -166,6 +168,44 @@ public class CryptUtils {
 
         return crypt(commitmentOpening, sessionKey, Cipher.ENCRYPT_MODE);
 
+    }
+
+    boolean verifyCommitment(byte[] commitmentOpening, String commitmentHash, String uniqueId) {
+        byte[] decryptedCommitment = crypt(commitmentOpening, sessionKey, Cipher.DECRYPT_MODE);
+        if (decryptedCommitment == null) {
+            return false;
+        }
+
+        String decryptedUniqueId = new String(Arrays.copyOfRange(decryptedCommitment, 0, ID_SIZE / 8));
+        if (uniqueId.equals(decryptedUniqueId)) {
+            return false;
+        }
+        decryptedCommitment = merge(decryptedCommitment, sessionKey.getEncoded());
+
+
+        String decryptedCommitmentBase64 = Base64.getEncoder().encodeToString(SHA512(decryptedCommitment));
+        return commitmentHash.equals(decryptedCommitmentBase64);
+
+        /*int noisyInputSize = (decryptedCommitment.length - ID_SIZE / 8 - KEY_SIZE / 8) / 2;
+
+        String decryptedUniqueId = new String(Arrays.copyOfRange(decryptedCommitment, 0, ID_SIZE / 8));
+
+        byte[] noisyInputXBytes = Arrays.copyOfRange(decryptedCommitment, ID_SIZE / 8,
+                                                                            ID_SIZE / 8 + noisyInputSize);
+        byte[] noisyInputYBytes = Arrays.copyOfRange(decryptedCommitment, ID_SIZE / 8 + noisyInputSize,
+                                                                            ID_SIZE / 8 + 2 * noisyInputSize);
+
+        BigInteger decryptedNonce = new BigInteger(
+                Arrays.copyOfRange(decryptedCommitment, decryptedCommitment.length - KEY_SIZE / 8, decryptedCommitment.length)
+        );
+
+        List<Float> decryptedNoisyInputX = new ArrayList<>();
+        List<Float> decryptedNoisyInputY = new ArrayList<>();
+
+
+
+        Log.d(TAG, decryptedUniqueId);
+        return true;*/
     }
 
     private byte[] crypt(byte[] msg, SecretKeySpec key, int mode) {
