@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -207,6 +208,30 @@ class ConnManager {
                     noisyInputY);
             write(myCommitment);
 
+            // Read other device's commitment opening size
+            mmBuffer = new byte[4];
+            read();
+            int otherCommitmentOpeningSize = ByteBuffer.wrap(mmBuffer).getInt();
+
+            // Commitment Opening
+            byte[] myCommitmentOpening = cryptUtils.openCommitment(uniqueID,
+                    noisyInputX,
+                    noisyInputY);
+
+            // Send size of the commitment first, since it is variable and
+            // the bluetooth socket read requires the buffer size beforehand
+            byte[] myCommitmentOpeningSize = ByteBuffer.allocate(Integer.SIZE / 8).putInt(myCommitmentOpening.length).array();
+
+            write(myCommitmentOpeningSize);
+
+            // Read other device's commitment opening
+            mmBuffer = new byte[otherCommitmentOpeningSize];
+            read();
+
+            // Send commitment opening
+            write(myCommitmentOpening);
+
+            Log.d(TAG, "Commitment sent successfully with no errors");
         }
 
         private void read() {

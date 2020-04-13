@@ -1,6 +1,5 @@
 package com.example.dario_dell.smartphone;
 
-
 import android.util.Log;
 
 import java.math.BigInteger;
@@ -36,6 +35,8 @@ public class CryptUtils {
     private BigInteger priv;
     // Current session Key
     private SecretKeySpec sessionKey;
+    // Current session nonce
+    private BigInteger nonce;
 
     // Parameters extraction based on:
     // https://stackoverflow.com/questions/19323178/how-to-do-diffie-hellman-key-generation-and-retrieve-raw-key-bytes-in-java
@@ -63,7 +64,7 @@ public class CryptUtils {
     void setDHParams() {
         p = new BigInteger("158226922697030617948797227800498624915189325504023952753861279447483239021860246817118586173001979901983796625583670102839781534905294538416934403704582647288855845359398886205261258488868149392541793104557804708023361921748188126306804286723526796069672484804981694321100425357802703970505567917675490154159");
         g = new BigInteger("88173088025497969607285612227517451555521798225119643685974814908304000890896133241125234093687057175629737474938680821119549216182920507795942634570963329026513429453884778473255437919969740174644539207004023810453975179883613841204932790018405615190065694910358431372613294863132989048355311612311291989235");
-
+        genNonce();
     }
 
     BigInteger genKeyPair() {
@@ -78,7 +79,6 @@ public class CryptUtils {
     }
 
     private BigInteger genNonce() {
-        BigInteger nonce;
         do {
             nonce = new BigInteger(KEY_SIZE, (new Random()));
         } while (nonce.toByteArray().length != KEY_SIZE / 8);
@@ -123,14 +123,14 @@ public class CryptUtils {
         }
     }
 
-    public byte[] genCommitment(String id,
-                                List<Float>noisyInputX,
-                                List<Float>noisyInputY) {
+    byte[] genCommitment(String id,
+                         List<Float>noisyInputX,
+                         List<Float>noisyInputY) {
 
         int n = noisyInputX.size();
 
         byte[] idBytes = id.getBytes();
-        byte[] nonceBytes = genNonce().toByteArray();
+        byte[] nonceBytes = nonce.toByteArray();
         byte[] sessionKeyBytes = sessionKey.getEncoded();
         byte[] noisyInputXBytes = new byte[n];
         byte[] noisyInputYBytes = new byte[n];
@@ -144,7 +144,30 @@ public class CryptUtils {
         return SHA512(commitmentMsg);
     }
 
-    public String crypt(byte[] msg, SecretKeySpec key, int mode) {
+    byte[] openCommitment(String id,
+                          List<Float>noisyInputX,
+                          List<Float>noisyInputY) {
+
+        int n = noisyInputX.size();
+
+        byte[] idBytes = id.getBytes();
+        byte[] nonceBytes = nonce.toByteArray();
+
+        byte[] noisyInputXBytes = new byte[n];
+        byte[] noisyInputYBytes = new byte[n];
+
+        for (int i = 0; i < n; ++i) {
+            noisyInputXBytes[i] = noisyInputX.get(i).byteValue();
+            noisyInputYBytes[i] = noisyInputY.get(i).byteValue();
+        }
+
+        byte[] commitmentOpening = merge(idBytes, noisyInputXBytes, noisyInputYBytes, nonceBytes);
+
+        return crypt(commitmentOpening, sessionKey, Cipher.ENCRYPT_MODE);
+
+    }
+
+    private byte[] crypt(byte[] msg, SecretKeySpec key, int mode) {
         try {
             // Set the cipher with the crypto primitive (AES), mode of operation (CBC) and padding scheme (PKCS5PADDING)
             Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
@@ -161,10 +184,9 @@ public class CryptUtils {
             switch (mode) {
                 case Cipher.ENCRYPT_MODE:
                     byte[] msgEncrypted = cipher.doFinal(msg);
-                    return Base64.getEncoder().encodeToString(msgEncrypted);
+                    return Base64.getEncoder().encode(msgEncrypted);
                 case Cipher.DECRYPT_MODE:
-                    byte[] msgDecrypted = cipher.doFinal(Base64.getDecoder().decode(msg));
-                    return new String(msgDecrypted);
+                    return cipher.doFinal(Base64.getDecoder().decode(msg));
             }
         }
         catch (Exception e) {
