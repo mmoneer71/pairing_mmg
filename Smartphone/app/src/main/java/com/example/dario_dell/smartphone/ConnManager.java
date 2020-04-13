@@ -14,6 +14,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,6 +29,7 @@ class ConnManager {
     private boolean keyExchangeDone, noisyInputCollected;
     private List<Float> noisyInputX, noisyInputY;
     private long startTime, deltaT1, deltaT2;
+    private String uniqueID;
 
     // Defines several constants used when transmitting messages between the
     // service and the UI.
@@ -46,6 +48,7 @@ class ConnManager {
         cryptUtils = new CryptUtils();
         keyExchangeDone = false;
         noisyInputCollected = false;
+        uniqueID = UUID.randomUUID().toString();
     }
     Intent checkIfEnabled() {
         if (!getBluetoothAdapter().isEnabled()) {
@@ -174,9 +177,18 @@ class ConnManager {
             // Block waiting till noisy input is collected
             while (!noisyInputCollected);
 
-            Log.d(TAG, noisyInputX.size() + " " + noisyInputY.size());
-            Log.d(TAG, noisyInputX.get(1) + " " + noisyInputY.get(1));
+            // Generate commitment
+            byte[] myCommitment = cryptUtils.genCommitment(uniqueID,
+                    noisyInputX,
+                    noisyInputY);
 
+            write(myCommitment);
+
+            // Read other's device commitment
+            mmBuffer = new byte[CryptUtils.HASH_SIZE / 8];
+            read();
+
+            String otherCommitment = Base64.getEncoder().encodeToString(mmBuffer);
         }
 
         private void read() {

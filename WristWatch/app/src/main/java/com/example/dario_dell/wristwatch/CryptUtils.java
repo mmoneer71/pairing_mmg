@@ -8,7 +8,9 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.Base64;
+import java.util.List;
 import java.util.Random;
 
 import javax.crypto.Cipher;
@@ -22,6 +24,8 @@ public class CryptUtils {
     private final static String TAG = "CryptUtils";
     // Key size
     static final int KEY_SIZE = 1024;
+    // Hash function output size
+    static final int HASH_SIZE = 512;
     // Generator: Has to be primitive root
     private BigInteger g;
     // Prime value
@@ -73,6 +77,15 @@ public class CryptUtils {
         return this.pub;
     }
 
+    private BigInteger genNonce() {
+        BigInteger nonce;
+        do {
+            nonce = new BigInteger(KEY_SIZE, (new Random()));
+        } while (nonce.toByteArray().length != KEY_SIZE / 8);
+
+        return nonce;
+    }
+
     SecretKeySpec computeSessionKey(BigInteger pubComponent) {
 
         if (sessionKey != null) {
@@ -99,7 +112,39 @@ public class CryptUtils {
 
     }
 
-    public String crypt(String msg, SecretKeySpec key, int mode) {
+    private byte[] SHA512(byte[] msg) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-512");
+            return digest.digest(msg);
+
+        } catch (NoSuchAlgorithmException e) {
+            Log.e(TAG, "Error occurred when generating the hashed message", e);
+            return null;
+        }
+    }
+
+    public byte[] genCommitment(String id,
+                                List<Float>noisyInputX,
+                                List<Float>noisyInputY) {
+
+        int n = noisyInputX.size();
+
+        byte[] idBytes = id.getBytes();
+        byte[] nonceBytes = genNonce().toByteArray();
+        byte[] sessionKeyBytes = sessionKey.getEncoded();
+        byte[] noisyInputXBytes = new byte[n];
+        byte[] noisyInputYBytes = new byte[n];
+
+        for (int i = 0; i < n; ++i) {
+            noisyInputXBytes[i] = noisyInputX.get(i).byteValue();
+            noisyInputYBytes[i] = noisyInputY.get(i).byteValue();
+        }
+
+        byte[] commitmentMsg = merge(idBytes, noisyInputXBytes, noisyInputYBytes, nonceBytes, sessionKeyBytes);
+        return SHA512(commitmentMsg);
+    }
+
+    public String crypt(byte[] msg, SecretKeySpec key, int mode) {
         try {
             // Set the cipher with the crypto primitive (AES), mode of operation (CBC) and padding scheme (PKCS5PADDING)
             Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
@@ -115,7 +160,7 @@ public class CryptUtils {
             // Or do the decryption and return the plaintext
             switch (mode) {
                 case Cipher.ENCRYPT_MODE:
-                    byte[] msgEncrypted = cipher.doFinal(msg.getBytes());
+                    byte[] msgEncrypted = cipher.doFinal(msg);
                     return Base64.getEncoder().encodeToString(msgEncrypted);
                 case Cipher.DECRYPT_MODE:
                     byte[] msgDecrypted = cipher.doFinal(Base64.getDecoder().decode(msg));
@@ -129,5 +174,26 @@ public class CryptUtils {
         return null;
     }
 
+    private byte[] merge(byte[]... arrays)
+    {
+        int finalLength = 0;
+        for (byte[] array : arrays) {
+            finalLength += array.length;
+        }
 
+        byte[] dest = null;
+        int destPos = 0;
+
+        for (byte[] array : arrays)
+        {
+            if (dest == null) {
+                dest = Arrays.copyOf(array, finalLength);
+                destPos = array.length;
+            } else {
+                System.arraycopy(array, 0, dest, destPos, array.length);
+                destPos += array.length;
+            }
+        }
+        return dest;
+    }
 }
