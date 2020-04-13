@@ -129,6 +129,8 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
                 logData = false;
                 x_lin_acc.clear();
                 y_lin_acc.clear();
+                instructionsTxtView.setText(R.string.pairing);
+                startBtn.setEnabled(false);
             }
         });
     }

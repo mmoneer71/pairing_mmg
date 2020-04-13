@@ -107,7 +107,7 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
         connManager = new ConnManager();
         checkExternalWritePermission();
         initBluetooth();
-        initProgressBar();
+        initProgressBar("", false);
     }
 
     @Override
@@ -122,7 +122,6 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
         handler.postDelayed(this, 30);
         if (!isInitialized) {
             checkInitProgress();
-            isInitialized = true;
         }
 
         logData();
@@ -131,15 +130,20 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
     private void checkInitProgress() {
         if (connManager.isKeyExchangeDone()) {
             progressBar.setVisibility(View.GONE);
-            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
             pleaseWaitTxtView.setVisibility(View.GONE);
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+            isInitialized = true;
         }
     }
 
-    private void initProgressBar() {
+    private void initProgressBar(String text, boolean setText) {
         progressBar.setVisibility(View.VISIBLE);
+        pleaseWaitTxtView.setVisibility(View.VISIBLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
                 WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+        if (setText) {
+            pleaseWaitTxtView.setText(text);
+        }
     }
 
     private void logData() {
@@ -170,6 +174,20 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL);
         }
+    }
+
+    private void clear() {
+        velocityTracker.recycle();
+        velocityTracker = null;
+        connManager.setNoisyInput(x_velocity, y_velocity);
+        writeToFile();
+        initProgressBar("Pairing in progress, please wait", true);
+        generation = 0;
+        log = "";
+        logData = false;
+        x_velocity.clear();
+        y_velocity.clear();
+        resetView();
     }
 
     @Override
@@ -233,16 +251,7 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
                 velocityTracker.addMovement(event);
-                velocityTracker.recycle();
-                velocityTracker = null;
-                connManager.setNoisyInput(x_velocity, y_velocity);
-                writeToFile();
-                generation = 0;
-                log = "";
-                logData = false;
-                x_velocity.clear();
-                y_velocity.clear();
-                resetView();
+                clear();
                 break;
         }
         // Calling invalidate will cause the onDraw method to execute

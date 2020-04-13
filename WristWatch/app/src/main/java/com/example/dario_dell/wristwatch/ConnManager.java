@@ -30,7 +30,7 @@ class ConnManager {
     private BluetoothAdapter bluetoothAdapter;
     private Handler handler; // handler that gets info from Bluetooth service
     private CryptUtils cryptUtils;
-    private boolean keyExchangeDone;
+    private boolean keyExchangeDone, noisyInputCollected;
     private List<Float> noisyInputX, noisyInputY;
     private long startTime, deltaT1, deltaT2;
 
@@ -49,6 +49,7 @@ class ConnManager {
         handler = new Handler();
         cryptUtils = new CryptUtils();
         keyExchangeDone = false;
+        noisyInputCollected = false;
     }
     Intent checkIfEnabled() {
         if (!getBluetoothAdapter().isEnabled()) {
@@ -65,6 +66,7 @@ class ConnManager {
         this.noisyInputX = new ArrayList<>(xAcc);
         this.noisyInputY = new ArrayList<>(yAcc);
         initTimers();
+        noisyInputCollected = true;
     }
 
     private void initTimers() {
@@ -186,6 +188,11 @@ class ConnManager {
             cryptUtils.computeSessionKey(gY);
             keyExchangeDone = true;
 
+            // Block waiting till noisy input is collected
+            while (!noisyInputCollected);
+
+            Log.d(TAG, noisyInputX.size() + " " + noisyInputY.size());
+            Log.d(TAG, noisyInputX.get(1) + " " + noisyInputY.get(1));
         }
 
         private void read() {
