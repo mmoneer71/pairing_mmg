@@ -41,6 +41,10 @@ public class CryptUtils {
     private SecretKeySpec sessionKey;
     // Current session nonce
     private BigInteger nonce;
+    // Current commitment opening
+    private byte[] commitmentOpening;
+    // Latest decrypted commitment received from other device
+    private byte[] decryptedCommitment;
 
     // Parameters extraction based on:
     // https://stackoverflow.com/questions/19323178/how-to-do-diffie-hellman-key-generation-and-retrieve-raw-key-bytes-in-java
@@ -143,48 +147,29 @@ public class CryptUtils {
             noisyInputYBytes[i] = noisyInputY.get(i).byteValue();
         }
 
-        byte[] commitmentMsg = merge(idBytes, noisyInputXBytes, noisyInputYBytes, nonceBytes, sessionKeyBytes);
+        this.commitmentOpening = merge(idBytes, noisyInputXBytes, noisyInputYBytes, nonceBytes);
+        byte[] commitmentMsg = merge(this.commitmentOpening, sessionKeyBytes);
         return SHA512(commitmentMsg);
     }
 
-    byte[] openCommitment(String id,
-                          List<Float>noisyInputX,
-                          List<Float>noisyInputY) {
-
-        int n = noisyInputX.size();
-
-        byte[] idBytes = id.getBytes();
-        byte[] nonceBytes = nonce.toByteArray();
-
-        byte[] noisyInputXBytes = new byte[n];
-        byte[] noisyInputYBytes = new byte[n];
-
-        for (int i = 0; i < n; ++i) {
-            noisyInputXBytes[i] = noisyInputX.get(i).byteValue();
-            noisyInputYBytes[i] = noisyInputY.get(i).byteValue();
-        }
-
-        byte[] commitmentOpening = merge(idBytes, noisyInputXBytes, noisyInputYBytes, nonceBytes);
-
-        return crypt(commitmentOpening, sessionKey, Cipher.ENCRYPT_MODE);
-
+    byte[] openCommitment() {
+        return crypt(this.commitmentOpening, sessionKey, Cipher.ENCRYPT_MODE);
     }
 
     boolean verifyCommitment(byte[] commitmentOpening, String commitmentHash, String uniqueId) {
-        byte[] decryptedCommitment = crypt(commitmentOpening, sessionKey, Cipher.DECRYPT_MODE);
-        if (decryptedCommitment == null) {
+        this.decryptedCommitment = crypt(commitmentOpening, sessionKey, Cipher.DECRYPT_MODE);
+        if (this.decryptedCommitment == null) {
             return false;
         }
 
-        String decryptedUniqueId = new String(Arrays.copyOfRange(decryptedCommitment, 0, ID_SIZE / 8));
+        String decryptedUniqueId = new String(Arrays.copyOfRange(this.decryptedCommitment, 0, ID_SIZE / 8));
         if (uniqueId.equals(decryptedUniqueId)) {
             return false;
         }
-        decryptedCommitment = merge(decryptedCommitment, sessionKey.getEncoded());
+        byte[] commitmentToVerify = merge(this.decryptedCommitment, sessionKey.getEncoded());
 
 
-        String decryptedCommitmentBase64 = Base64.getEncoder().encodeToString(SHA512(decryptedCommitment));
-        return commitmentHash.equals(decryptedCommitmentBase64);
+        return Arrays.equals(SHA512(commitmentToVerify), Base64.getDecoder().decode(commitmentHash));
 
         /*int noisyInputSize = (decryptedCommitment.length - ID_SIZE / 8 - KEY_SIZE / 8) / 2;
 

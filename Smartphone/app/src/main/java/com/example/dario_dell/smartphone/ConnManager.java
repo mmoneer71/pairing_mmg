@@ -193,9 +193,7 @@ class ConnManager {
 
 
             // Commitment Opening
-            byte[] myCommitmentOpening = cryptUtils.openCommitment(uniqueID,
-                    noisyInputX,
-                    noisyInputY);
+            byte[] myCommitmentOpening = cryptUtils.openCommitment();
 
             // Send size of the commitment first, since it is variable and
             // the bluetooth socket read requires the buffer size beforehand
@@ -217,9 +215,12 @@ class ConnManager {
             read();
 
             // Decrypt and verify other device's commitment opening
-            if (cryptUtils.verifyCommitment(mmBuffer, otherCommitment, uniqueID)) {
-                Log.i(TAG, "Commitment verification succeeded!");
+            if (!cryptUtils.verifyCommitment(mmBuffer, otherCommitment, uniqueID)) {
+                Log.e(TAG, "Commitment verification failed! Aborting.");
+                return;
             }
+
+            Log.i(TAG, "Commitment verification succeeded.");
         }
 
         private void read() {
