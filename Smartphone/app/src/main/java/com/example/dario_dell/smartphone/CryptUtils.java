@@ -4,6 +4,7 @@ package com.example.dario_dell.smartphone;
 import android.util.Log;
 
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
@@ -11,6 +12,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
@@ -134,21 +136,16 @@ public class CryptUtils {
                          List<Float>noisyInputX,
                          List<Float>noisyInputY) {
 
-        int n = noisyInputX.size();
 
         byte[] idBytes = id.getBytes();
         byte[] nonceBytes = nonce.toByteArray();
         byte[] sessionKeyBytes = sessionKey.getEncoded();
-        byte[] noisyInputXBytes = new byte[n];
-        byte[] noisyInputYBytes = new byte[n];
+        byte[] noisyInputXBytes = floatListToByteArray(noisyInputX);
+        byte[] noisyInputYBytes = floatListToByteArray(noisyInputY);
 
-        for (int i = 0; i < n; ++i) {
-            noisyInputXBytes[i] = noisyInputX.get(i).byteValue();
-            noisyInputYBytes[i] = noisyInputY.get(i).byteValue();
-        }
 
-        this.commitmentOpening = merge(idBytes, noisyInputXBytes, noisyInputYBytes, nonceBytes);
-        byte[] commitmentMsg = merge(this.commitmentOpening, sessionKeyBytes);
+        this.commitmentOpening = mergeArrays(idBytes, noisyInputXBytes, noisyInputYBytes, nonceBytes);
+        byte[] commitmentMsg = mergeArrays(this.commitmentOpening, sessionKeyBytes);
         return SHA512(commitmentMsg);
     }
 
@@ -166,7 +163,7 @@ public class CryptUtils {
         if (uniqueId.equals(decryptedUniqueId)) {
             return false;
         }
-        byte[] commitmentToVerify = merge(this.decryptedCommitment, sessionKey.getEncoded());
+        byte[] commitmentToVerify = mergeArrays(this.decryptedCommitment, sessionKey.getEncoded());
 
         return Arrays.equals(SHA512(commitmentToVerify), Base64.getDecoder().decode(commitmentHash));
 
@@ -221,7 +218,7 @@ public class CryptUtils {
         return null;
     }
 
-    private byte[] merge(byte[]... arrays)
+    private byte[] mergeArrays(byte[]... arrays)
     {
         int finalLength = 0;
         for (byte[] array : arrays) {
@@ -242,5 +239,30 @@ public class CryptUtils {
             }
         }
         return dest;
+    }
+
+    private byte[] floatListToByteArray(List<Float> input) {
+
+        List<Byte>resBytes = new ArrayList<>();
+        for (Float val: input) {
+            byte[] valBytes = ByteBuffer.allocate(Float.SIZE / 8).putFloat(val).array();
+
+            for (byte byteVal : valBytes) {
+                resBytes.add(byteVal);
+            }
+        }
+
+        return convertBytes(resBytes);
+    }
+
+    private byte[] convertBytes(List<Byte> bytes)
+    {
+        byte[] ret = new byte[bytes.size()];
+        Iterator<Byte> iterator = bytes.iterator();
+        for (int i = 0; i < ret.length; i++)
+        {
+            ret[i] = iterator.next();
+        }
+        return ret;
     }
 }
