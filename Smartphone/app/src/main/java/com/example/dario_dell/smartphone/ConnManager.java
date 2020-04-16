@@ -15,6 +15,7 @@ import java.io.OutputStream;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
@@ -22,9 +23,12 @@ import java.util.UUID;
 
 class ConnManager {
 
-    private BluetoothAdapter bluetoothAdapter;
     private final static String TAG = "ConnectionManager";
     private final static String UUID_STRING = "f6b42a90-79a7-11ea-bc55-0242ac130003";
+    private final static byte[] ACK_MSG = "ack".getBytes();
+    private final static int MAX_BUFFER_SIZE = 990;
+
+    private BluetoothAdapter bluetoothAdapter;
     private Handler handler; // handler that gets info from Bluetooth service
     private CryptUtils cryptUtils;
     private boolean keyExchangeDone, noisyInputCollected;
@@ -198,29 +202,30 @@ class ConnManager {
             // Send size of the commitment first, since it is variable and
             // the bluetooth socket read requires the buffer size beforehand
             byte[] myCommitmentOpeningSize = ByteBuffer.allocate(Integer.SIZE / 8).putInt(myCommitmentOpening.length).array();
+            Log.i(TAG, myCommitmentOpening.length + "");
 
             write(myCommitmentOpeningSize);
 
             // Read other device's commitment opening size
-            mmBuffer = new byte[4];
+            mmBuffer = new byte[Integer.SIZE / 8];
             read();
 
             int otherCommitmentOpeningSize = ByteBuffer.wrap(mmBuffer).getInt();
 
             // Send commitment opening
-            write(myCommitmentOpening);
+            writeCommitmentOpening(myCommitmentOpening);
 
             // Read other device's commitment opening
-            mmBuffer = new byte[otherCommitmentOpeningSize];
-            read();
+            byte[] otherCommitmentOpening = readCommitmentOpening(otherCommitmentOpeningSize);
 
             // Decrypt and verify other device's commitment opening
-            if (!cryptUtils.verifyCommitment(mmBuffer, otherCommitment, uniqueID)) {
+            if (!cryptUtils.verifyCommitment(otherCommitmentOpening, otherCommitment, uniqueID)) {
                 Log.e(TAG, "Commitment verification failed! Aborting.");
                 return;
             }
 
             Log.i(TAG, "Commitment verification succeeded.");
+            Log.i(TAG, otherCommitmentOpeningSize + "");
         }
 
         private void read() {
@@ -273,6 +278,39 @@ class ConnManager {
             }
         }
 
+        private byte[] readCommitmentOpening(int commitmentSize) {
+            byte[] receivedCommitment = null;
+            int remainingBytes = commitmentSize;
+            while (remainingBytes > 0) {
+                int bufferSize = (remainingBytes < MAX_BUFFER_SIZE) ? remainingBytes : MAX_BUFFER_SIZE;
+                mmBuffer = new byte[bufferSize];
+                read();
+                if (receivedCommitment == null) {
+                    receivedCommitment = mmBuffer.clone();
+                }
+                else {
+                    receivedCommitment = cryptUtils.mergeArrays(receivedCommitment, mmBuffer);
+                }
+                remainingBytes -= bufferSize;
+                write(ACK_MSG);
+            }
+            return receivedCommitment;
+        }
+
+
+        private void writeCommitmentOpening(byte[] commitment) {
+            int remainingBytes = commitment.length, startIndex = 0;
+            while (remainingBytes > 0) {
+                int bufferSize = (remainingBytes < MAX_BUFFER_SIZE) ? remainingBytes : MAX_BUFFER_SIZE;
+                byte[] dataToSend = Arrays.copyOfRange(commitment, startIndex, startIndex + bufferSize);
+                write(dataToSend);
+                startIndex += bufferSize;
+                remainingBytes -= bufferSize;
+                mmBuffer = new byte[ACK_MSG.length];
+                read();
+
+            }
+        }
 
     }
 }

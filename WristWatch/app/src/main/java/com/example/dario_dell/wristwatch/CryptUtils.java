@@ -218,7 +218,7 @@ public class CryptUtils {
         return null;
     }
 
-    private byte[] mergeArrays(byte[]... arrays)
+    byte[] mergeArrays(byte[]... arrays)
     {
         int finalLength = 0;
         for (byte[] array : arrays) {
