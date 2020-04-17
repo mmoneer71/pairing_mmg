@@ -95,10 +95,10 @@ public class CryptUtils {
 
     }
 
-    SecretKeySpec computeSessionKey(BigInteger pubComponent) {
+    void computeSessionKey(BigInteger pubComponent) {
 
-        if (sessionKey != null) {
-            return sessionKey;
+        if (this.sessionKey != null) {
+            return;
         }
 
         try {
@@ -112,11 +112,9 @@ public class CryptUtils {
             // Return an AES-256 key
             sessionKey = new SecretKeySpec(dhKeyComp, "AES");
 
-            return sessionKey;
 
         } catch (NoSuchAlgorithmException e) {
             Log.e(TAG, "Error occurred when generating the session key", e);
-            return null;
         }
 
     }
@@ -166,27 +164,24 @@ public class CryptUtils {
         byte[] commitmentToVerify = mergeArrays(this.decryptedCommitment, sessionKey.getEncoded());
 
         return Arrays.equals(SHA512(commitmentToVerify), Base64.getDecoder().decode(commitmentHash));
+    }
 
-        /*int noisyInputSize = (decryptedCommitment.length - ID_SIZE / 8 - KEY_SIZE / 8) / 2;
+    void getDecryptedNoisyInput(List<Float> noisyInputX, List<Float> noisyInputY) {
 
-        String decryptedUniqueId = new String(Arrays.copyOfRange(decryptedCommitment, 0, ID_SIZE / 8));
+        int noisyInputSize = (decryptedCommitment.length - ID_SIZE / 8 - KEY_SIZE / 8) / 2;
 
-        byte[] noisyInputXBytes = Arrays.copyOfRange(decryptedCommitment, ID_SIZE / 8,
-                                                                            ID_SIZE / 8 + noisyInputSize);
-        byte[] noisyInputYBytes = Arrays.copyOfRange(decryptedCommitment, ID_SIZE / 8 + noisyInputSize,
-                                                                            ID_SIZE / 8 + 2 * noisyInputSize);
+        byte[] noisyInputXBytes = Arrays.copyOfRange(this.decryptedCommitment, ID_SIZE / 8,
+                ID_SIZE / 8 + noisyInputSize);
+        byte[] noisyInputYBytes = Arrays.copyOfRange(this.decryptedCommitment, ID_SIZE / 8 + noisyInputSize,
+                ID_SIZE / 8 + 2 * noisyInputSize);
 
-        BigInteger decryptedNonce = new BigInteger(
-                Arrays.copyOfRange(decryptedCommitment, decryptedCommitment.length - KEY_SIZE / 8, decryptedCommitment.length)
-        );
+        for (int i = 0; i < noisyInputSize; i += Float.SIZE / 8) {
+            ByteBuffer inputXBuffer = ByteBuffer.wrap(Arrays.copyOfRange(noisyInputXBytes, i, i + Float.SIZE / 8));
+            ByteBuffer inputYBuffer = ByteBuffer.wrap(Arrays.copyOfRange(noisyInputYBytes, i, i + Float.SIZE / 8));
 
-        List<Float> decryptedNoisyInputX = new ArrayList<>();
-        List<Float> decryptedNoisyInputY = new ArrayList<>();
-
-
-
-        Log.d(TAG, decryptedUniqueId);
-        return true;*/
+            noisyInputX.add(inputXBuffer.getFloat());
+            noisyInputY.add(inputYBuffer.getFloat());
+        }
     }
 
     private byte[] crypt(byte[] msg, SecretKeySpec key, int mode) {

@@ -36,7 +36,7 @@ class ConnManager {
     private Handler handler; // handler that gets info from Bluetooth service
     private CryptUtils cryptUtils;
     private boolean keyExchangeDone, noisyInputCollected;
-    private List<Float> noisyInputX, noisyInputY;
+    private List<Float> noisyInputX, noisyInputY, decryptedNoisyInputX, decryptedNoisyInputY;
     private long startTime, deltaT1, deltaT2;
     private String uniqueID;
 
@@ -58,6 +58,8 @@ class ConnManager {
         keyExchangeDone = false;
         noisyInputCollected = false;
         uniqueID = UUID.randomUUID().toString();
+        decryptedNoisyInputX = new ArrayList<>();
+        decryptedNoisyInputY = new ArrayList<>();
     }
     Intent checkIfEnabled() {
         if (!getBluetoothAdapter().isEnabled()) {
@@ -222,7 +224,6 @@ class ConnManager {
             // Send size of the commitment first, since it is variable and
             // the bluetooth socket read requires the buffer size beforehand
             byte[] myCommitmentOpeningSize = ByteBuffer.allocate(Integer.SIZE / 8).putInt(myCommitmentOpening.length).array();
-            Log.i(TAG, myCommitmentOpening.length + "");
 
             write(myCommitmentOpeningSize);
 
@@ -239,7 +240,8 @@ class ConnManager {
             }
 
             Log.i(TAG, "Commitment verification succeeded.");
-            Log.i(TAG, otherCommitmentOpeningSize + "");
+
+            cryptUtils.getDecryptedNoisyInput(decryptedNoisyInputX, decryptedNoisyInputY);
 
         }
 
