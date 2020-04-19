@@ -153,7 +153,9 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
             }
 
             x_velocity.add(filtered_velocity[0]);
-            y_velocity.add(filtered_velocity[1]);
+            // Multiply velocity by -1 since +ve and -ve axes
+            // are the opposite of the ones on the watch
+            y_velocity.add(filtered_velocity[1] * -1);
 
             log += generation++ + ",";
             log += System.currentTimeMillis() - logTime + ",";
