@@ -1,4 +1,4 @@
-package com.example.dario_dell.wristwatch;
+package com.example.dario_dell.smartphone;
 
 import android.util.Log;
 
@@ -173,9 +173,9 @@ class MatchingAlgo {
     }
 
     static boolean pair(List<Float> xAccWatch,
-                               List<Float> yAccWatch,
-                               List<Float> xVelPhone,
-                               List<Float> yVelPhone) {
+                        List<Float> yAccWatch,
+                        List<Float> xVelPhone,
+                        List<Float> yVelPhone) {
 
         init();
 

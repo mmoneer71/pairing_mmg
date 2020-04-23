@@ -5,7 +5,7 @@
     values-round/strings.xml for round devices.
     -->
     <string name="title">Dp-mmg Pairing</string>
-    <string name="instructions">Please wait, Initializing.</string>
+    <string name="instructions">Please wait, Initializing. Keep your hand as still as possible.</string>
     <string name="drawing">Start drawing on your phone\'s screen now.</string>
     <string name="pairing">Pairing in progress, please wait.</string>
 </resources>

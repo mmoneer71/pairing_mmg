@@ -35,7 +35,7 @@ class ConnManager {
     private BluetoothAdapter bluetoothAdapter;
     private Handler handler; // handler that gets info from Bluetooth service
     private CryptUtils cryptUtils;
-    private boolean keyExchangeDone, noisyInputCollected;
+    private boolean keyExchangeDone, noisyInputCollected, pairingComplete;
     private List<Float> noisyInputX, noisyInputY, decryptedNoisyInputX, decryptedNoisyInputY;
     private long startTime, deltaT1, deltaT2;
     private String uniqueID;
@@ -57,6 +57,7 @@ class ConnManager {
         cryptUtils = new CryptUtils();
         keyExchangeDone = false;
         noisyInputCollected = false;
+        pairingComplete = false;
         uniqueID = UUID.randomUUID().toString();
         decryptedNoisyInputX = new ArrayList<>();
         decryptedNoisyInputY = new ArrayList<>();
@@ -86,6 +87,8 @@ class ConnManager {
     }
 
     boolean isKeyExchangeDone() {return keyExchangeDone; }
+
+    boolean isPairingComplete() {return pairingComplete; }
 
     void accept() {
         new AcceptThread().start();
@@ -242,6 +245,14 @@ class ConnManager {
             Log.i(TAG, "Commitment verification succeeded.");
 
             cryptUtils.getDecryptedNoisyInput(decryptedNoisyInputX, decryptedNoisyInputY);
+
+            boolean pairingSuccess = MatchingAlgo.pair(noisyInputX,
+                    noisyInputY,
+                    decryptedNoisyInputX,
+                    decryptedNoisyInputY);
+
+            Log.i(TAG, "Success is " + pairingSuccess);
+            pairingComplete = true;
 
         }
 

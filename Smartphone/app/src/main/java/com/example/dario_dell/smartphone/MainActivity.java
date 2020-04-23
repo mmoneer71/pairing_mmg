@@ -2,10 +2,7 @@ package com.example.dario_dell.smartphone;
 
 import android.Manifest;
 import android.bluetooth.BluetoothDevice;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
@@ -19,7 +16,6 @@ import android.view.VelocityTracker;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ProgressBar;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import java.io.File;
@@ -119,7 +115,7 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
 
     @Override
     public void run() {
-        handler.postDelayed(this, 30);
+        handler.postDelayed(this, 20);
         if (!isInitialized) {
             checkInitProgress();
         }
@@ -198,7 +194,7 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
 
         int action = event.getActionMasked();
         metrics = getResources().getDisplayMetrics();
-        Log.d(TAG, "dpi: " + metrics.xdpi*metrics.ydpi);
+        //Log.d(TAG, "dpi: " + metrics.xdpi*metrics.ydpi);
         //System.out.println(metrics.xdpi*metrics.ydpi);
         //Log.d(TAG, "x-dpi:" + metrics.xdpi);
         //Log.d(TAG, "y-dpi:" + metrics.ydpi);

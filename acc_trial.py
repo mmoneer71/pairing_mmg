@@ -32,8 +32,8 @@ def grey_code_extraction_2bit(a, b):
 jump = 2
 threshold = 0.4
 zeroes = [0.0, 0.0]
-vel_file_path = 'Test_Data/second_matching_tests/Drawing_Data/2020-04-06_8_smartphone_sample.csv'
-acc_file_path = 'Test_Data/second_matching_tests/Accelerometer_Data/2020-04-06_7_watch_sample.csv'
+vel_file_path = 'Test_Data/second_matching_tests/Drawing_Data/2020-04-24_4_smartphone_sample.csv'
+acc_file_path = 'Test_Data/second_matching_tests/Accelerometer_Data/2020-04-24_4_watch_sample.csv'
 
 
 # DataFrame collection from files
@@ -48,8 +48,8 @@ x_vel_filtered = data_phone['x_velocity_filtered'].to_list()
 y_vel_filtered = (data_phone['y_velocity_filtered'] * -1).to_list()
 
 noise_factor = 4
-calib_acc = {'min': min(min(x_acc_filtered) / noise_factor, min(y_acc_filtered) / noise_factor),
-             'max': max(max(x_acc_filtered) / noise_factor, max(y_acc_filtered) / noise_factor)}
+calib_acc = {'min': -0.45, #min(min(x_acc_filtered) / noise_factor, min(y_acc_filtered) / noise_factor),
+             'max': 0.45}#max(max(x_acc_filtered) / noise_factor, max(y_acc_filtered) / noise_factor)}
 
 calib_vel = 0.03
 
