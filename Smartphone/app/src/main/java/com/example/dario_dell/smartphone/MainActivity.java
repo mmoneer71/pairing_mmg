@@ -17,6 +17,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -132,6 +133,10 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
         }
     }
 
+    private boolean checkPairingProgress() {
+        return connManager.isPairingComplete();
+    }
+
     private void initProgressBar(String text, boolean setText) {
         progressBar.setVisibility(View.VISIBLE);
         pleaseWaitTxtView.setVisibility(View.VISIBLE);
@@ -179,13 +184,27 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
         velocityTracker = null;
         connManager.setNoisyInput(x_velocity, y_velocity);
         writeToFile();
-        initProgressBar("Pairing in progress, please wait", true);
+        //initProgressBar("Pairing in progress, please wait", true);
         generation = 0;
         log = "";
         logData = false;
         x_velocity.clear();
         y_velocity.clear();
         resetView();
+
+        while (!checkPairingProgress());
+
+
+        boolean pairingResult = connManager.getPairingResult();
+        Toast pairingToast;
+        if (pairingResult) {
+            pairingToast = Toast.makeText(getApplicationContext(), "Pairing successful!", Toast.LENGTH_LONG);
+            pairingToast.show();
+        }
+        else {
+            pairingToast = Toast.makeText(getApplicationContext(), "Pairing failed.", Toast.LENGTH_LONG);
+            pairingToast.show();
+        }
     }
 
     @Override

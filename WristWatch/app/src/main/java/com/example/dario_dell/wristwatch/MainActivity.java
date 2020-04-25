@@ -131,6 +131,17 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
                 y_lin_acc.clear();
                 instructionsTxtView.setText(R.string.pairing);
                 startBtn.setEnabled(false);
+
+                while (!checkPairingProgress());
+
+
+                boolean pairingResult = connManager.getPairingResult();
+                if (pairingResult) {
+                    instructionsTxtView.setText(R.string.success);
+                }
+                else {
+                    instructionsTxtView.setText(R.string.failure);
+                }
             }
         });
     }
@@ -198,6 +209,10 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
                     MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL);
         }
 
+    }
+
+    private boolean checkPairingProgress() {
+        return connManager.isPairingComplete();
     }
 
     private void checkStability() {

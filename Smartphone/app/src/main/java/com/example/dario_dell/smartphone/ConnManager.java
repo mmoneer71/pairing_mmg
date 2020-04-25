@@ -31,7 +31,7 @@ class ConnManager {
     private BluetoothAdapter bluetoothAdapter;
     private Handler handler; // handler that gets info from Bluetooth service
     private CryptUtils cryptUtils;
-    private boolean keyExchangeDone, noisyInputCollected, pairingComplete;
+    private boolean keyExchangeDone, noisyInputCollected, pairingComplete, pairingStatus;
     private List<Float> noisyInputX, noisyInputY, decryptedNoisyInputX, decryptedNoisyInputY;
     private long startTime, deltaT1, deltaT2;
     private String uniqueID;
@@ -89,6 +89,8 @@ class ConnManager {
     boolean isKeyExchangeDone() {return keyExchangeDone; }
 
     boolean isPairingComplete() {return pairingComplete; }
+
+    boolean getPairingResult() {return pairingStatus; }
 
     private class ConnectThread extends Thread {
         private final BluetoothSocket mmSocket;
@@ -232,12 +234,11 @@ class ConnManager {
 
             cryptUtils.getDecryptedNoisyInput(decryptedNoisyInputX, decryptedNoisyInputY);
 
-            boolean pairingSuccess = MatchingAlgo.pair(decryptedNoisyInputX,
+            pairingStatus = MatchingAlgo.pair(decryptedNoisyInputX,
                     decryptedNoisyInputY,
                     noisyInputX,
                     noisyInputY);
 
-            Log.i(TAG, "Success is " + pairingSuccess);
             pairingComplete = true;
         }
 
