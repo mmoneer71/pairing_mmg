@@ -196,14 +196,11 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
 
 
         boolean pairingResult = connManager.getPairingResult();
-        Toast pairingToast;
         if (pairingResult) {
-            pairingToast = Toast.makeText(getApplicationContext(), "Pairing successful!", Toast.LENGTH_LONG);
-            pairingToast.show();
+            Toast.makeText(getApplicationContext(), "Pairing successful!", Toast.LENGTH_LONG).show();
         }
         else {
-            pairingToast = Toast.makeText(getApplicationContext(), "Pairing failed.", Toast.LENGTH_LONG);
-            pairingToast.show();
+            Toast.makeText(getApplicationContext(), "Pairing failed.", Toast.LENGTH_LONG).show();
         }
     }
 
