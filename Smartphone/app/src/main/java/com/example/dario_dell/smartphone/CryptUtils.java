@@ -9,12 +9,12 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.DHParameterSpec;
@@ -79,7 +79,7 @@ public class CryptUtils {
 
     BigInteger genKeyPair() {
         do {
-            this.priv = new BigInteger(KEY_SIZE, (new Random()));
+            this.priv = new BigInteger(KEY_SIZE, (new SecureRandom()));
 
             // Compute the public key component y
             this.pub = this.g.modPow(priv, this.p);
@@ -90,7 +90,7 @@ public class CryptUtils {
 
     private void genNonce() {
         do {
-            nonce = new BigInteger(KEY_SIZE, (new Random()));
+            nonce = new BigInteger(KEY_SIZE, (new SecureRandom()));
         } while (nonce.toByteArray().length != KEY_SIZE / 8);
 
     }
