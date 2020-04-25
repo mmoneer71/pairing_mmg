@@ -30,6 +30,8 @@ class ConnManager {
     private final static String NAME = "DP-MMG";
     private final static byte[] ACK_MSG = "ack".getBytes();
     private final static int MAX_BUFFER_SIZE = 990;
+    private final static int DELTA_T1 = 1000;
+    private final static int DELTA_T2 = 1000;
 
 
     private BluetoothAdapter bluetoothAdapter;
@@ -37,7 +39,7 @@ class ConnManager {
     private CryptUtils cryptUtils;
     private boolean keyExchangeDone, noisyInputCollected, pairingComplete, pairingStatus;
     private List<Float> noisyInputX, noisyInputY, decryptedNoisyInputX, decryptedNoisyInputY;
-    private long startTime, deltaT1, deltaT2;
+    private long startTime;
     private String uniqueID;
 
 
@@ -76,14 +78,7 @@ class ConnManager {
     void setNoisyInput(List<Float>xAcc, List<Float> yAcc) {
         this.noisyInputX = new ArrayList<>(xAcc);
         this.noisyInputY = new ArrayList<>(yAcc);
-        initTimers();
         noisyInputCollected = true;
-    }
-
-    private void initTimers() {
-        startTime = System.currentTimeMillis();
-        deltaT1 = 5000;
-        deltaT2 = 5000;
     }
 
     boolean isKeyExchangeDone() {return keyExchangeDone; }
@@ -207,6 +202,10 @@ class ConnManager {
             // Block waiting till noisy input is collected
             while (!noisyInputCollected);
 
+            // Set start timer
+            startTime = System.currentTimeMillis();
+            Log.i(TAG, "Start time: " + startTime);
+
             // Read other's device commitment
             mmBuffer = new byte[CryptUtils.HASH_SIZE / 8];
             read();
@@ -218,6 +217,8 @@ class ConnManager {
                     noisyInputX,
                     noisyInputY);
             write(myCommitment);
+
+            Log.i(TAG, "3rd phase done after: " + (System.currentTimeMillis() - startTime));
 
             // Read other device's commitment opening size
             mmBuffer = new byte[Integer.SIZE / 8];
@@ -254,6 +255,7 @@ class ConnManager {
                     decryptedNoisyInputX,
                     decryptedNoisyInputY);
 
+            Log.i(TAG, "4th phase done after: " + (System.currentTimeMillis() - startTime));
             pairingComplete = true;
 
         }
