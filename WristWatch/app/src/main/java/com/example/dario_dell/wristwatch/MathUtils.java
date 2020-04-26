@@ -15,6 +15,7 @@ public class MathUtils {
         int n = signal.size();
         List<Float> cumtrap = new ArrayList<>();
 
+        cumtrap.add(0.0f);
         for (int i = 1; i < n - 1; i++) {
             cumtrap.add(cumtrap.get(i - 1) + 0.5f * (signal.get(i) + signal.get(i - 1)));
         }

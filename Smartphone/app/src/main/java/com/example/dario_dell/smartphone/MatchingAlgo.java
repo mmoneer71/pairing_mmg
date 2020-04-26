@@ -11,7 +11,8 @@ class MatchingAlgo {
     private static final String TAG = "MatchingAlgo";
 
     private static final int JUMP = 2;
-    private static final float ACCEPTANCE_THRESHOLD = 0.4f;
+    private static final float ACCEPTANCE_THRESHOLD = 0.5f;
+    private static final float MIN_WINDOW_THRESHOLD = 0.1f;
     private static final float ZERO = 0.0f;
 
 
@@ -160,15 +161,33 @@ class MatchingAlgo {
     }
 
     private static float compareEncodedStrings(List<String> encodedBitsPhone, List<String> encodedBitsWatch) {
-        int matchingCodesCount = 0;
         int n = encodedBitsPhone.size();
+        float matchResult = 0.0f;
 
-        for (int i = 0; i < n; ++i) {
-            if (encodedBitsPhone.get(i).equals(encodedBitsWatch.get(i))) {
-                ++matchingCodesCount;
+        int window = encodedBitsWatch.size() - n;
+        Log.i(TAG, "Parameters are: " + n + " " + window);
+        while (window >= 0) {
+            int matchingCodesCount = 0;
+            for (int i = 0; i < n; ++i) {
+                if (encodedBitsPhone.get(i).equals(encodedBitsWatch.get(i + window))) {
+                    ++matchingCodesCount;
+                }
             }
+
+            float currMatchResult = (float) matchingCodesCount / (float) n;
+            Log.i(TAG, "Current match result: " + currMatchResult);
+
+            if (currMatchResult < MIN_WINDOW_THRESHOLD) {
+                return ZERO;
+            }
+
+            if (currMatchResult > matchResult) {
+                matchResult = currMatchResult;
+            }
+            --window;
         }
-        return (float)matchingCodesCount / (float)n;
+        return matchResult;
+
     }
 
     static boolean pair(List<Float> xAccWatch,

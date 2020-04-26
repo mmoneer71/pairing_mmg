@@ -75,6 +75,7 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
     private String log = "";
     List<Float> x_velocity, y_velocity;
     private boolean isInitialized = false;
+    private boolean pairingDone = false;
 
 
     @Override
@@ -121,7 +122,9 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
             checkInitProgress();
         }
 
-        logData();
+        if (!pairingDone) {
+            checkPairingProgress();
+        }
     }
 
     private void checkInitProgress() {
@@ -133,8 +136,18 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
         }
     }
 
-    private boolean checkPairingProgress() {
-        return connManager.isPairingComplete();
+    private void checkPairingProgress() {
+        if (connManager.isPairingComplete()) {
+            progressBar.setVisibility(View.GONE);
+            pleaseWaitTxtView.setVisibility(View.GONE);
+            boolean pairingResult = connManager.getPairingResult();
+            if (pairingResult) {
+                Toast.makeText(getApplicationContext(), "Pairing successful!", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(getApplicationContext(), "Pairing failed.", Toast.LENGTH_LONG).show();
+            }
+            pairingDone = true;
+        }
     }
 
     private void initProgressBar(String text, boolean setText) {
@@ -184,24 +197,13 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
         velocityTracker = null;
         connManager.setNoisyInput(x_velocity, y_velocity);
         writeToFile();
-        //initProgressBar("Pairing in progress, please wait", true);
+        initProgressBar("Pairing in progress, please wait", true);
         generation = 0;
         log = "";
         logData = false;
         x_velocity.clear();
         y_velocity.clear();
         resetView();
-
-        while (!checkPairingProgress());
-
-
-        boolean pairingResult = connManager.getPairingResult();
-        if (pairingResult) {
-            Toast.makeText(getApplicationContext(), "Pairing successful!", Toast.LENGTH_LONG).show();
-        }
-        else {
-            Toast.makeText(getApplicationContext(), "Pairing failed.", Toast.LENGTH_LONG).show();
-        }
     }
 
     @Override
@@ -258,6 +260,8 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
                 velocity[1] = toMeterPerSecondsConversion(velocity_y, metrics.ydpi);
 
                 filtered_velocity = meanFilterVelocity.filterFloat(velocity);
+
+                logData();
 
                 updateView(velocity_x, velocity_y, max_velocity_x, max_velocity_y, magnitude);
                 break;

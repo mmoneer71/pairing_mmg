@@ -195,7 +195,7 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
 
     @Override
     public void run() {
-        handler.postDelayed(this, 20);
+        handler.postDelayed(this, 25);
         if (!isStable) {
             checkStability();
         }
