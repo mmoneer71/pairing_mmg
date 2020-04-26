@@ -26,7 +26,7 @@ class ConnManager {
     private final static String TAG = "ConnectionManager";
     private final static String UUID_STRING = "f6b42a90-79a7-11ea-bc55-0242ac130003";
     private final static byte[] ACK_MSG = "ack".getBytes();
-    private final static int MAX_BUFFER_SIZE = 990;
+    private final static int MAX_BUFFER_SIZE = 900;
     private final static int DELTA_T1 = 1000;
     private final static int DELTA_T2 = 1000;
 

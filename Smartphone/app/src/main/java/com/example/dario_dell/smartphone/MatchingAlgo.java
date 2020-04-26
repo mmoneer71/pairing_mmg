@@ -97,16 +97,16 @@ class MatchingAlgo {
         }
         else if (xIndices.size() == 0) {
             startIndex = yIndices.get(0);
-            // endIndex = yIndices.get(yIndices.size() - 1);
+            endIndex = yIndices.get(yIndices.size() - 1);
         }
         else if (yIndices.size() == 0) {
             startIndex = xIndices.get(0);
-            // endIndex = xIndices.get(xIndices.size() - 1);
+            endIndex = xIndices.get(xIndices.size() - 1);
         }
         else {
             startIndex = xIndices.get(0) < yIndices.get(0) ? xIndices.get(0) : yIndices.get(0);
-            /*endIndex = xIndices.get(xIndices.size() - 1) > yIndices.get(yIndices.size() - 1)
-                    ? xIndices.get(xIndices.size() - 1) : yIndices.get(yIndices.size() - 1);*/
+            endIndex = xIndices.get(xIndices.size() - 1) > yIndices.get(yIndices.size() - 1)
+                    ? xIndices.get(xIndices.size() - 1) : yIndices.get(yIndices.size() - 1);
         }
 
 
@@ -116,8 +116,8 @@ class MatchingAlgo {
         }
 
         if (signalType == SignalTypes.SIGNAL_ACC) {
-            xAcc = xInput.subList(startIndex, startIndex + xVel.size());
-            yAcc = yInput.subList(startIndex, startIndex + yVel.size());
+            xAcc = xInput.subList(startIndex, endIndex);
+            yAcc = yInput.subList(startIndex, endIndex);
         }
 
     }
@@ -162,7 +162,6 @@ class MatchingAlgo {
     private static float compareEncodedStrings(List<String> encodedBitsPhone, List<String> encodedBitsWatch) {
         int matchingCodesCount = 0;
         int n = encodedBitsPhone.size();
-        Log.i(TAG, encodedBitsPhone.size() + " " + encodedBitsWatch.size());
 
         for (int i = 0; i < n; ++i) {
             if (encodedBitsPhone.get(i).equals(encodedBitsWatch.get(i))) {
@@ -193,7 +192,7 @@ class MatchingAlgo {
         List<String> watchGrayCode = gen2bitGrayCode(xVelWatch, yVelWatch);
         List<String> phoneGrayCode = gen2bitGrayCode(xVel, yVel);
 
-        float matchRatio = compareEncodedStrings(watchGrayCode, phoneGrayCode);
+        float matchRatio = compareEncodedStrings(phoneGrayCode, watchGrayCode);
         Log.i(TAG, "Match ratio is: " + matchRatio);
 
         return matchRatio >= ACCEPTANCE_THRESHOLD && success;
