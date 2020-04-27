@@ -30,8 +30,8 @@ class ConnManager {
     private final static String NAME = "DP-MMG";
     private final static byte[] ACK_MSG = "ack".getBytes();
     private final static int MAX_BUFFER_SIZE = 900;
-    private final static int DELTA_T1 = 1000;
-    private final static int DELTA_T2 = 1000;
+    private final static int DELTA_T1 = 400;
+    private final static int DELTA_T2 = 900;
 
 
     private BluetoothAdapter bluetoothAdapter;
@@ -39,7 +39,6 @@ class ConnManager {
     private CryptUtils cryptUtils;
     private boolean keyExchangeDone, noisyInputCollected, pairingComplete, pairingStatus;
     private List<Float> noisyInputX, noisyInputY, decryptedNoisyInputX, decryptedNoisyInputY;
-    private long startTime;
     private String uniqueID;
 
 
@@ -203,8 +202,7 @@ class ConnManager {
             while (!noisyInputCollected);
 
             // Set start timer
-            startTime = System.currentTimeMillis();
-            Log.i(TAG, "Start time: " + startTime);
+            long startTime = System.currentTimeMillis();
 
             // Read other's device commitment
             mmBuffer = new byte[CryptUtils.HASH_SIZE / 8];
@@ -218,7 +216,12 @@ class ConnManager {
                     noisyInputY);
             write(myCommitment);
 
-            Log.i(TAG, "3rd phase done after: " + (System.currentTimeMillis() - startTime));
+            if (System.currentTimeMillis() - startTime > DELTA_T1) {
+                Log.e(TAG, "Time violation on delta1");
+                pairingStatus = false;
+                pairingComplete = true;
+                return;
+            }
 
             // Read other device's commitment opening size
             mmBuffer = new byte[Integer.SIZE / 8];
@@ -255,7 +258,10 @@ class ConnManager {
                     decryptedNoisyInputX,
                     decryptedNoisyInputY);
 
-            Log.i(TAG, "4th phase done after: " + (System.currentTimeMillis() - startTime));
+            if (System.currentTimeMillis() - startTime > DELTA_T2) {
+                Log.e(TAG, "Time violation on delta2");
+                pairingStatus = false;
+            }
             pairingComplete = true;
 
         }

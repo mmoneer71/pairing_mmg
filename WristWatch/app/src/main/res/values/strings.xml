@@ -6,7 +6,7 @@
     -->
     <string name="title">Dp-mmg Pairing</string>
     <string name="instructions">Please wait, Initializing. Keep your hand as still as possible.</string>
-    <string name="drawing">Start drawing on your phone\'s screen now.</string>
+    <string name="drawing">Start drawing on your phone\'s screen now. Click pair as soon as you're done.</string>
     <string name="pairing">Pairing in progress, please wait.</string>
     <string name="success">Pairing successful!</string>
     <string name="failure">Pairing failed.</string>

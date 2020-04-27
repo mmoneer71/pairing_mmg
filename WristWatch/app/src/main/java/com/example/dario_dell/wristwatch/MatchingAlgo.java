@@ -186,8 +186,12 @@ class MatchingAlgo {
         addZeroesForSync(xAcc);
         addZeroesForSync(yAcc);
 
+        if (!success)
+            return false;
+
         List<Float> xVelWatch = MathUtils.cumtrapz(xAcc);
         List<Float> yVelWatch = MathUtils.cumtrapz(yAcc);
+
 
         List<String> watchGrayCode = gen2bitGrayCode(xVelWatch, yVelWatch);
         List<String> phoneGrayCode = gen2bitGrayCode(xVel, yVel);
