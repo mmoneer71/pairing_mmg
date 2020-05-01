@@ -64,15 +64,6 @@
             android:textSize="12sp"
             android:visibility="invisible"/>
 
-        <Button
-            android:id="@+id/startBtn"
-            android:layout_width="104dp"
-            android:layout_height="59dp"
-            android:layout_alignParentBottom="true"
-            android:layout_centerHorizontal="true"
-            android:layout_marginBottom="4dp"
-            android:enabled="false"
-            android:text="PAIR" />
 
 
     </RelativeLayout>

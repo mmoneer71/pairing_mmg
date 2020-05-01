@@ -27,7 +27,6 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
 
     //view components
     private TextView instructionsTxtView, waitTxtView, goTxtView;
-    private Button startBtn;
 
     private SensorManager senSensorManager;
     private Sensor senAccelerometer;
@@ -119,12 +118,6 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         x_lin_acc = new ArrayList<>();
         y_lin_acc = new ArrayList<>();
 
-        startBtn = findViewById(R.id.startBtn);
-        startBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-
-            }
-        });
     }
 
     //unregister the sensor when the application hibernates
@@ -207,7 +200,6 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
             Log.d("Calibration", "Still calibrating...");
             return;
         }
-        startBtn.setEnabled(true);
         logData = true;
         instructionsTxtView.setText(R.string.drawing);
         isStable = true;
@@ -221,7 +213,6 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         x_lin_acc.clear();
         y_lin_acc.clear();
         instructionsTxtView.setText(R.string.pairing);
-        startBtn.setEnabled(false);
 
         while (!checkPairingProgress());
 
