@@ -11,7 +11,7 @@ class MatchingAlgo {
 
     private static final int JUMP = 2;
     private static final float ACCEPTANCE_THRESHOLD = 0.5f;
-    private static final float EPSILON = 0.1f;
+    private static final float EPSILON = 0.2f;
     private static final float ZERO = 0.0f;
     private static final float VEL_NOISE = 0.03f;
     private static final float ACC_NOISE = 0.4f;
@@ -144,6 +144,9 @@ class MatchingAlgo {
         boolean watchHasMoreSamples = watchBitsSize > phoneBitsSize;
         int n = watchHasMoreSamples ? phoneBitsSize : watchBitsSize;
         int window = Math.abs(phoneBitsSize - watchBitsSize), walker = 0;
+
+        if (window > n)
+            return ZERO;
 
         Log.i(TAG, "Parameters are: " + n + " " + window);
         while (walker <= window) {
