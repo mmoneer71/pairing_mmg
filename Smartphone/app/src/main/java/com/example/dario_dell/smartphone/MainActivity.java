@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Message;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
@@ -52,6 +53,7 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
     private ConnManager connManager;
     private final int REQUEST_ENABLE_BT = 1;
     private final static String SMARTWATCH_NAME = "TicWatch Pro 0306";
+    private final Message noisyInputMsg = new Message();
 
     // resulting string to write into a CSV file
     // Init: CSV file header
@@ -102,7 +104,7 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
         x_velocity = new ArrayList<>();
         y_velocity = new ArrayList<>();
 
-        connManager = new ConnManager();
+        connManager = new ConnManager(noisyInputMsg);
         checkExternalWritePermission();
         initBluetooth();
         initProgressBar("", false);
@@ -192,11 +194,17 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
         }
     }
 
+    private void notifyNoisyInputCollected() {
+        connManager.setNoisyInput(x_velocity, y_velocity);
+        synchronized (noisyInputMsg) {
+            noisyInputMsg.notify();
+        }
+        writeToFile();
+    }
+
     private void clear() {
         velocityTracker.recycle();
         velocityTracker = null;
-        connManager.setNoisyInput(x_velocity, y_velocity);
-        writeToFile();
         initProgressBar("Pairing in progress, please wait", true);
         generation = 0;
         log = "";
@@ -269,6 +277,7 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
                 velocityTracker.addMovement(event);
+                notifyNoisyInputCollected();
                 clear();
                 break;
         }

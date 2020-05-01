@@ -26,16 +26,18 @@ class ConnManager {
     private final static String TAG = "ConnectionManager";
     private final static String UUID_STRING = "f6b42a90-79a7-11ea-bc55-0242ac130003";
     private final static byte[] ACK_MSG = "ack".getBytes();
+    private final static byte[] INPUT_COLLECTED_MSG = "done".getBytes();
     private final static int MAX_BUFFER_SIZE = 900;
-    private final static int DELTA_T1 = 1400;
-    private final static int DELTA_T2 = 1900;
+    private final static int DELTA_T1 = 400;
+    private final static int DELTA_T2 = 900;
 
     private BluetoothAdapter bluetoothAdapter;
     private Handler handler; // handler that gets info from Bluetooth service
     private CryptUtils cryptUtils;
-    private boolean keyExchangeDone, noisyInputCollected, pairingComplete, pairingStatus;
+    private boolean keyExchangeDone, pairingComplete, pairingStatus;
     private List<Float> noisyInputX, noisyInputY, decryptedNoisyInputX, decryptedNoisyInputY;
     private String uniqueID;
+    private final Message noisyInputMsg;
 
     // Defines several constants used when transmitting messages between the
     // service and the UI.
@@ -48,16 +50,16 @@ class ConnManager {
     }
 
 
-    ConnManager() {
+    ConnManager(Message noisyInputMsg) {
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         handler = new Handler();
         cryptUtils = new CryptUtils();
         keyExchangeDone = false;
-        noisyInputCollected = false;
         pairingComplete = false;
         uniqueID = UUID.randomUUID().toString();
         decryptedNoisyInputX = new ArrayList<>();
         decryptedNoisyInputY = new ArrayList<>();
+        this.noisyInputMsg = noisyInputMsg;
     }
     Intent checkIfEnabled() {
         if (!getBluetoothAdapter().isEnabled()) {
@@ -77,7 +79,6 @@ class ConnManager {
     void setNoisyInput(List<Float>xVel, List<Float> yVel) {
         this.noisyInputX = new ArrayList<>(xVel);
         this.noisyInputY = new ArrayList<>(yVel);
-        noisyInputCollected = true;
     }
 
     boolean isKeyExchangeDone() {return keyExchangeDone; }
@@ -180,8 +181,24 @@ class ConnManager {
             cryptUtils.computeSessionKey(gY);
             keyExchangeDone = true;
 
-            // Block waiting till noisy input is collected
-            while (!noisyInputCollected);
+            // Wait till noisy input is collected
+            synchronized (noisyInputMsg) {
+                try {
+                    noisyInputMsg.wait();
+                }
+                catch(InterruptedException e) {
+                    Log.e(TAG, "Error while waiting for noisy Input to be collected.", e);
+                }
+            }
+
+            Log.i(TAG, "Noisy input collected successfully.");
+
+            // Notify wristwatch that input is collected
+            write(INPUT_COLLECTED_MSG);
+
+            // Wait for ack message to be received
+            mmBuffer = new byte[ACK_MSG.length];
+            read();
 
             // Set start timer
             long startTime = System.currentTimeMillis();
@@ -202,6 +219,7 @@ class ConnManager {
                 pairingComplete = true;
                 return;
             }
+            Log.i(TAG, "3rd phase finished after: " + (System.currentTimeMillis() - startTime));
 
             String otherCommitment = Base64.getEncoder().encodeToString(mmBuffer);
 
@@ -246,6 +264,7 @@ class ConnManager {
                 Log.e(TAG, "Time violation on delta2");
                 pairingStatus = false;
             }
+            Log.i(TAG, "4th phase finished after: " + (System.currentTimeMillis() - startTime));
             pairingComplete = true;
         }
 

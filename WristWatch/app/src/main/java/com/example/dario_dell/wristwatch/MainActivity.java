@@ -123,25 +123,6 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         startBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
 
-                connManager.setNoisyInput(x_lin_acc, y_lin_acc);
-                writeToFile();
-                log = "";
-                logData = false;
-                x_lin_acc.clear();
-                y_lin_acc.clear();
-                instructionsTxtView.setText(R.string.pairing);
-                startBtn.setEnabled(false);
-
-                while (!checkPairingProgress());
-
-
-                boolean pairingResult = connManager.getPairingResult();
-                if (pairingResult) {
-                    instructionsTxtView.setText(R.string.success);
-                }
-                else {
-                    instructionsTxtView.setText(R.string.failure);
-                }
             }
         });
     }
@@ -195,11 +176,16 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
 
     @Override
     public void run() {
-        handler.postDelayed(this, 25);
+        handler.postDelayed(this, 20);
         if (!isStable) {
             checkStability();
         }
         logData();
+
+        if (connManager.isNoisyInputCollected()) {
+            initPairing();
+            handler.removeCallbacks(this);
+        }
     }
 
     private void checkExternalWritePermission() {
@@ -225,6 +211,28 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         logData = true;
         instructionsTxtView.setText(R.string.drawing);
         isStable = true;
+    }
+
+    private void initPairing() {
+        connManager.setNoisyInput(x_lin_acc, y_lin_acc);
+        writeToFile();
+        log = "";
+        logData = false;
+        x_lin_acc.clear();
+        y_lin_acc.clear();
+        instructionsTxtView.setText(R.string.pairing);
+        startBtn.setEnabled(false);
+
+        while (!checkPairingProgress());
+
+
+        boolean pairingResult = connManager.getPairingResult();
+        if (pairingResult) {
+            instructionsTxtView.setText(R.string.success);
+        }
+        else {
+            instructionsTxtView.setText(R.string.failure);
+        }
     }
 
     private void logData() {

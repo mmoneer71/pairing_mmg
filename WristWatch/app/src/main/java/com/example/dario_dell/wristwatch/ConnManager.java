@@ -29,6 +29,7 @@ class ConnManager {
     private final static String UUID_STRING = "f6b42a90-79a7-11ea-bc55-0242ac130003";
     private final static String NAME = "DP-MMG";
     private final static byte[] ACK_MSG = "ack".getBytes();
+    private final static byte[] INPUT_COLLECTED_MSG = "done".getBytes();
     private final static int MAX_BUFFER_SIZE = 900;
     private final static int DELTA_T1 = 400;
     private final static int DELTA_T2 = 900;
@@ -77,12 +78,13 @@ class ConnManager {
     void setNoisyInput(List<Float>xAcc, List<Float> yAcc) {
         this.noisyInputX = new ArrayList<>(xAcc);
         this.noisyInputY = new ArrayList<>(yAcc);
-        noisyInputCollected = true;
     }
 
     boolean isKeyExchangeDone() {return keyExchangeDone; }
 
     boolean isPairingComplete() {return pairingComplete; }
+
+    boolean isNoisyInputCollected() {return noisyInputCollected; }
 
     boolean getPairingResult() {return pairingStatus; }
 
@@ -198,8 +200,13 @@ class ConnManager {
             cryptUtils.computeSessionKey(gY);
             keyExchangeDone = true;
 
-            // Block waiting till noisy input is collected
-            while (!noisyInputCollected);
+            // Block waiting till noisy input is collected on phone
+            mmBuffer = new byte[INPUT_COLLECTED_MSG.length];
+            read();
+            noisyInputCollected = true;
+
+            // Send ack message
+            write(ACK_MSG);
 
             // Set start timer
             long startTime = System.currentTimeMillis();
@@ -222,6 +229,7 @@ class ConnManager {
                 pairingComplete = true;
                 return;
             }
+            Log.i(TAG, "3rd phase finished after: " + (System.currentTimeMillis() - startTime));
 
             // Read other device's commitment opening size
             mmBuffer = new byte[Integer.SIZE / 8];
@@ -262,6 +270,7 @@ class ConnManager {
                 Log.e(TAG, "Time violation on delta2");
                 pairingStatus = false;
             }
+            Log.i(TAG, "4th phase finished after: " + (System.currentTimeMillis() - startTime));
             pairingComplete = true;
 
         }

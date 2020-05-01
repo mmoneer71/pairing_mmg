@@ -3,7 +3,6 @@ package com.example.dario_dell.wristwatch;
 import android.util.Log;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 class MatchingAlgo {
@@ -11,17 +10,14 @@ class MatchingAlgo {
     private static final String TAG = "MatchingAlgo";
 
     private static final int JUMP = 2;
-    private static final float ACCEPTANCE_THRESHOLD = 0.4f;
+    private static final float ACCEPTANCE_THRESHOLD = 0.5f;
+    private static final float EPSILON = 0.1f;
     private static final float ZERO = 0.0f;
-
-
-    private static final float NOISE_FACTOR = 4.0f;
     private static final float VEL_NOISE = 0.03f;
-    private static final float ACC_NOISE = 0.45f;
+    private static final float ACC_NOISE = 0.4f;
 
-    private static float accNoiseMax, accNoiseMin;
+
     private static boolean success = true;
-
     private static List<Float> xAcc, yAcc, xVel, yVel;
 
     private interface SignalTypes {
@@ -36,15 +32,6 @@ class MatchingAlgo {
         yVel = new ArrayList<>();
     }
 
-    private static void setAccNoiseRange(List<Float> accX, List<Float> accY) {
-
-        float maxX = Collections.max(accX), maxY = Collections.max(accY);
-        float minX = Collections.min(accX), minY = Collections.min(accY);
-
-        accNoiseMax = maxX > maxY ? maxX / NOISE_FACTOR : maxY / NOISE_FACTOR;
-        accNoiseMin = minX < minY ? minX / NOISE_FACTOR : minY / NOISE_FACTOR;
-    }
-
     private static void addZeroesForSync(List<Float> input) {
 
         input.add(ZERO);
@@ -55,13 +42,12 @@ class MatchingAlgo {
 
 
     private static void filterNoise(List<Float> xInput, List<Float> yInput, int signalType) {
-        int n = xInput.size(), startIndex, endIndex;
+        int n = xInput.size(), startIndex;
 
         float upperLimit, lowerLimit;
         List<Integer> xIndices = new ArrayList<>(), yIndices = new ArrayList<>();
 
         if (signalType == SignalTypes.SIGNAL_ACC) {
-            //setAccNoiseRange(xInput, yInput);
             upperLimit = ACC_NOISE;
             lowerLimit = -ACC_NOISE;
         }
@@ -97,16 +83,12 @@ class MatchingAlgo {
         }
         else if (xIndices.size() == 0) {
             startIndex = yIndices.get(0);
-            endIndex = yIndices.get(yIndices.size() - 1);
         }
         else if (yIndices.size() == 0) {
             startIndex = xIndices.get(0);
-            endIndex = xIndices.get(xIndices.size() - 1);
         }
         else {
             startIndex = xIndices.get(0) < yIndices.get(0) ? xIndices.get(0) : yIndices.get(0);
-            endIndex = xIndices.get(xIndices.size() - 1) > yIndices.get(yIndices.size() - 1)
-                    ? xIndices.get(xIndices.size() - 1) : yIndices.get(yIndices.size() - 1);
         }
 
 
@@ -116,15 +98,12 @@ class MatchingAlgo {
         }
 
         if (signalType == SignalTypes.SIGNAL_ACC) {
-            xAcc = xInput.subList(startIndex, endIndex);
-            yAcc = yInput.subList(startIndex, endIndex);
+            xAcc = xInput.subList(startIndex, xInput.size());
+            yAcc = yInput.subList(startIndex, yInput.size());
         }
 
     }
 
-    private static void sync() {
-
-    }
 
     private static List<String> gen2bitGrayCode(List<Float> xInput, List<Float> yInput) {
         List<String> encodedBits = new ArrayList<>();
@@ -160,38 +139,65 @@ class MatchingAlgo {
     }
 
     private static float compareEncodedStrings(List<String> encodedBitsPhone, List<String> encodedBitsWatch) {
-        int matchingCodesCount = 0;
-        int n = encodedBitsPhone.size();
+        int phoneBitsSize = encodedBitsPhone.size(), watchBitsSize = encodedBitsWatch.size();
+        float matchResult = 0.0f;
+        boolean watchHasMoreSamples = watchBitsSize > phoneBitsSize;
+        int n = watchHasMoreSamples ? phoneBitsSize : watchBitsSize;
+        int window = Math.abs(phoneBitsSize - watchBitsSize), walker = 0;
 
-        for (int i = 0; i < n; ++i) {
-            if (encodedBitsPhone.get(i).equals(encodedBitsWatch.get(i))) {
-                ++matchingCodesCount;
+        Log.i(TAG, "Parameters are: " + n + " " + window);
+        while (walker <= window) {
+            int matchingCodesCount = 0;
+            for (int i = 0; i < n; ++i) {
+                if (watchHasMoreSamples) {
+                    if (encodedBitsPhone.get(i).equals(encodedBitsWatch.get(i + walker))) {
+                        ++matchingCodesCount;
+                    }
+                }
+                else if (encodedBitsPhone.get(i + walker).equals(encodedBitsWatch.get(i))) {
+                    ++matchingCodesCount;
+                }
             }
+
+            float currMatchResult = (float) matchingCodesCount / (float) n;
+            Log.i(TAG, "Current match result: " + currMatchResult);
+
+            if (currMatchResult > ACCEPTANCE_THRESHOLD)
+                return currMatchResult;
+
+            if (currMatchResult < EPSILON) {
+                return ZERO;
+            }
+
+            if (currMatchResult > matchResult) {
+                matchResult = currMatchResult;
+            }
+            ++walker;
         }
-        return (float)matchingCodesCount / (float)n;
+        return matchResult;
+
     }
 
     static boolean pair(List<Float> xAccWatch,
-                               List<Float> yAccWatch,
-                               List<Float> xVelPhone,
-                               List<Float> yVelPhone) {
+                        List<Float> yAccWatch,
+                        List<Float> xVelPhone,
+                        List<Float> yVelPhone) {
 
         init();
 
         filterNoise(xVelPhone, yVelPhone, SignalTypes.SIGNAL_VEL);
         filterNoise(xAccWatch, yAccWatch, SignalTypes.SIGNAL_ACC);
 
+        if (!success)
+            return false;
+
         addZeroesForSync(xVel);
         addZeroesForSync(yVel);
         addZeroesForSync(xAcc);
         addZeroesForSync(yAcc);
 
-        if (!success)
-            return false;
-
         List<Float> xVelWatch = MathUtils.cumtrapz(xAcc);
         List<Float> yVelWatch = MathUtils.cumtrapz(yAcc);
-
 
         List<String> watchGrayCode = gen2bitGrayCode(xVelWatch, yVelWatch);
         List<String> phoneGrayCode = gen2bitGrayCode(xVel, yVel);
