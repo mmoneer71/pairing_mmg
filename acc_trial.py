@@ -32,7 +32,7 @@ def grey_code_extraction_2bit(a, b):
 jump = 2
 threshold = 0.55
 epsilon = 0.2
-window_range = 1.2
+window_range = 0.25
 zeroes = [0.0, 0.0]
 vel_file_path = 'Test_Data/sec_protocol_tests/Drawing_Data/2020-05-06_1_smartphone_sample.csv'
 acc_file_path = 'Test_Data/sec_protocol_tests/Accelerometer_Data/2020-05-06_1_watch_sample.csv'
