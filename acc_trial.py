@@ -30,10 +30,12 @@ def grey_code_extraction_2bit(a, b):
 
 # jump in terms of datapoint used for extracting the grey codedata_watch['x_acc_fin'][firstpeak_index:len(x_dy)]
 jump = 2
-threshold = 0.5
+threshold = 0.55
+epsilon = 0.2
+window_range = 1.2
 zeroes = [0.0, 0.0]
-vel_file_path = 'Test_Data/second_matching_tests/Drawing_Data/2020-05-01_2_smartphone_sample.csv'
-acc_file_path = 'Test_Data/second_matching_tests/Accelerometer_Data/2020-05-01_2_watch_sample.csv'
+vel_file_path = 'Test_Data/sec_protocol_tests/Drawing_Data/2020-05-06_1_smartphone_sample.csv'
+acc_file_path = 'Test_Data/sec_protocol_tests/Accelerometer_Data/2020-05-06_1_watch_sample.csv'
 
 
 # DataFrame collection from files
@@ -108,10 +110,10 @@ y_vel_filtered = zeroes + y_vel_filtered[vel_start:] + zeroes
 
 
 x_vel = cumtrapz(x_acc_filtered)
-x_pos = cumtrapz(x_vel)
+x_vel = [0.0] + x_vel
 
 y_vel = cumtrapz(y_acc_filtered)
-y_pos = cumtrapz(y_vel)
+y_vel = [0.0] + y_vel
 
 print(len(x_acc_filtered), len(x_vel_filtered))
 
@@ -125,6 +127,9 @@ watch_samples_more = len(watch_vel_greycode_2bit) > len(phone_vel_greycode_2bit)
 n = len(phone_vel_greycode_2bit) if watch_samples_more else len(watch_vel_greycode_2bit)
 window = abs(len(phone_vel_greycode_2bit) - len(watch_vel_greycode_2bit))
 
+if window > n * window_range:
+    print('Number of samples mismatch, aborting.')
+    exit(0)
 
 while walker <= window:
     matching_codes_count = 0
@@ -137,12 +142,13 @@ while walker <= window:
             matching_codes_count += 1
     
     curr_match_result = matching_codes_count / n
-
+    
+    print(curr_match_result)
     if curr_match_result > threshold:
         match_result = curr_match_result
         break
 
-    if curr_match_result < 0.1:
+    if curr_match_result < epsilon:
         match_result = 0.0
         break
     
