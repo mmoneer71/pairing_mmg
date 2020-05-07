@@ -26,7 +26,7 @@ import java.util.List;
 public class MainActivity extends WearableActivity implements AccelerationSensorObserver, LinearAccelerationSensorObserver, Runnable{
 
     //view components
-    private TextView instructionsTxtView, waitTxtView, goTxtView;
+    private TextView instructionsTxtView;
 
     private SensorManager senSensorManager;
     private Sensor senAccelerometer;
@@ -97,8 +97,6 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         setContentView(R.layout.activity_main);
 
         instructionsTxtView = findViewById(R.id.instructions);
-        waitTxtView = findViewById(R.id.wait);
-        goTxtView = findViewById(R.id.go);
 
         accelerationSensor = new AccelerationSensor(this);
         linearAccelerationSensor = new LinearAccelerationSensor();
