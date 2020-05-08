@@ -145,11 +145,11 @@ class MatchingAlgo {
         boolean watchHasMoreSamples = watchBitsSize > phoneBitsSize;
         int n = watchHasMoreSamples ? phoneBitsSize : watchBitsSize;
         int window = Math.abs(phoneBitsSize - watchBitsSize), walker = 0;
+        Log.i(TAG, "Parameters are: " + n + " " + window);
 
         if (window > n * WINDOW_RANGE)
             return ZERO;
 
-        Log.i(TAG, "Parameters are: " + n + " " + window);
         while (walker <= window) {
             int matchingCodesCount = 0;
             for (int i = 0; i < n; ++i) {
