@@ -30,12 +30,12 @@ def grey_code_extraction_2bit(a, b):
 
 # jump in terms of datapoint used for extracting the grey codedata_watch['x_acc_fin'][firstpeak_index:len(x_dy)]
 jump = 2
-threshold = 0.55
+threshold = 0.5
 epsilon = 0.2
 window_range = 0.25
 zeroes = [0.0, 0.0]
-vel_file_path = 'Test_Data/sec_protocol_tests/Drawing_Data/2020-05-06_1_smartphone_sample.csv'
-acc_file_path = 'Test_Data/sec_protocol_tests/Accelerometer_Data/2020-05-06_1_watch_sample.csv'
+vel_file_path = 'Test_Data/sec_protocol_tests/Drawing_Data/2020-05-08_6_smartphone_sample.csv'
+acc_file_path = 'Test_Data/sec_protocol_tests/Accelerometer_Data/2020-05-08_6_watch_sample.csv'
 
 
 # DataFrame collection from files
@@ -144,7 +144,7 @@ while walker <= window:
     curr_match_result = matching_codes_count / n
     
     print(curr_match_result)
-    if curr_match_result > threshold:
+    if curr_match_result >= threshold:
         match_result = curr_match_result
         break
 
