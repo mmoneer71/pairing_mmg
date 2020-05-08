@@ -3,16 +3,12 @@ package com.example.dario_dell.wristwatch;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.hardware.Sensor;
-import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.support.v4.app.ActivityCompat;
 import android.support.wearable.activity.WearableActivity;
 import android.util.Log;
-import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
 
 import java.io.File;
@@ -28,12 +24,6 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
     //view components
     private TextView instructionsTxtView;
 
-    private SensorManager senSensorManager;
-    private Sensor senAccelerometer;
-
-    //needed for changing the button functionality
-    private boolean isStart = true;
-    private boolean justStarted = true;
     private String folder_name = "/Accelerometer_Data/";
 
     //needed for providing unique names to the files
@@ -43,31 +33,16 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
     private final String filename_separator = "_";
     private final String filename_suffix = "watch_sample";
     private final String filename_format = ".csv";
-    String text_separator = ",";
 
     // resulting string to write into a CSV file
     // Init: CSV file header
     String header = "seq_number,timestamp,x_acc,y_acc,z_acc,x_lin_acc,y_lin_acc,z_lin_acc\n";
 
     //variables needed for detecting the Shaking Gesture
-    private long lastUpdate = 0;
-    private long startTime = 0;
-    private float x_acc, y_acc, z_acc;
     private float[] acceleration = new float[3];
     // https://stackoverflow.com/questions/15158769/android-acceleration-direction
     private float[] linearAcceleration = new float[3];
     private boolean isStable = false;
-    private long curTime = 0;
-    private int samplesCount = 0;
-    private float x_calibration = 0, y_calibration = 0, z_calibration = 0;
-
-    //sensitivity for detecting the Shaking Gesture
-    private static final int SHAKE_THRESHOLD = 0;
-    /* In order to have samples at 100Hz frequency.
-    This way (according to the Nyquist-Shannon theorem)
-    no actual information is lost in the sampling process
-    when reconstructing the 50Hz signal.
-    Change it if you need a different frequency */
 
 
     private final int MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL = 1;

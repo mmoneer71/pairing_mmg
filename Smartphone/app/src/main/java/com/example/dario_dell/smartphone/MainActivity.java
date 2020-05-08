@@ -58,7 +58,6 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
     // resulting string to write into a CSV file
     // Init: CSV file header
     String header = "seq_number,timestamp,x,y,x_velocity,y_velocity,x_velocity_filtered,y_velocity_filtered\n";
-    String text_separator = ",";
 
     private VelocityTracker velocityTracker = null;
     private float max_velocity_x, max_velocity_y;
