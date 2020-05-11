@@ -35,7 +35,7 @@ threshold = 0.5
 epsilon = 0.2
 window_range = 0.25
 zeroes = [0.0, 0.0]
-calib_acc = {'min': -0.4, 'max': 0.4}
+calib_acc = {'min': -0.45, 'max': 0.45}
 calib_vel = 0.03
 
 
@@ -44,8 +44,9 @@ files_watch = glob.glob('Test_Data/sec_protocol_tests/floating/Accelerometer_Dat
 
 files_phone.sort()
 files_watch.sort()
-
-
+success = 0
+false_positives = 0
+false_negatives = 0
 
 
 #vel_file_path = 'Test_Data/sec_protocol_tests/Drawing_Data/2020-05-08_1_smartphone_sample.csv'
@@ -56,6 +57,9 @@ for file_phone in files_phone:
     data_phone = pd.read_csv(file_phone, engine='python')
     for file_watch in files_watch:
         data_watch = pd.read_csv(file_watch, engine='python')
+
+        file_phone_identifier = file_phone.split('/')[-1].split('_')[1]
+        file_watch_identifier = file_watch.split('/')[-1].split('_')[1]
 
         x_acc_filtered = data_watch['x_lin_acc'].to_list()
         y_acc_filtered = data_watch['y_lin_acc'].to_list()
@@ -81,7 +85,7 @@ for file_phone in files_phone:
         y_acc_non_zero = [idx for idx, val in enumerate(y_acc_filtered) if val != 0]
 
         if not x_acc_non_zero and not y_acc_non_zero:
-            print(file_phone.split('/')[-1], file_watch.split('/')[-1], 'No motion detected from accelerometer!')
+            print(file_phone_identifier, file_watch_identifier, 'No motion detected from accelerometer!')
             continue
         elif not x_acc_non_zero:
             acc_start = y_acc_non_zero[0]
@@ -98,7 +102,7 @@ for file_phone in files_phone:
         y_vel_non_zero = [idx for idx, val in enumerate(y_vel_filtered) if val != 0]
 
         if not x_vel_non_zero and not y_vel_non_zero:
-            print(file_phone.split('/')[-1], file_watch.split('/')[-1], 'No motion detected from smartphone!')
+            print(file_phone_identifier, file_watch_identifier, 'No motion detected from smartphone!')
             continue
         elif not x_vel_non_zero:
             vel_start = y_vel_non_zero[0]
@@ -130,7 +134,11 @@ for file_phone in files_phone:
         window = abs(len(phone_vel_greycode_2bit) - len(watch_vel_greycode_2bit))
 
         if window > n * window_range:
-            print(file_phone.split('/')[-1], file_watch.split('/')[-1], 'Number of samples mismatch, aborting.')
+            if file_phone_identifier != file_watch_identifier:
+                success += 1
+            else:
+                print(file_phone_identifier, file_watch_identifier, 'Number of samples mismatch, aborting.')
+                false_negatives += 1
             continue
 
         while walker <= window:
@@ -158,12 +166,27 @@ for file_phone in files_phone:
             
             walker += 1
 
-
-        if match_result >= threshold:
-            print(file_phone.split('/')[-1], file_watch.split('/')[-1], "Success: " + str(match_result))
+        if file_phone_identifier == file_watch_identifier:
+            if match_result >= threshold:
+                success += 1
+            else:
+                print(file_phone_identifier, file_watch_identifier, str(match_result))
+                false_negatives += 1
         else:
-            print(file_phone.split('/')[-1], file_watch.split('/')[-1], "Failure: " + str(match_result))
+            if match_result < threshold:
+                success += 1
+            else:
+                print(file_phone_identifier, file_watch_identifier, str(match_result))
+                false_positives += 1
 
+        
+print('-------------------------------')
+print('Result:')
+print('Total tests:', success + false_positives + false_negatives)
+print('Success:', success)
+print('False positives:', false_positives)
+print('False negatives:', false_negatives)
+print('-------------------------------')
 
 ###################################Acceleration######################################
 #x_acc = np.diff(x_vel_filtered)

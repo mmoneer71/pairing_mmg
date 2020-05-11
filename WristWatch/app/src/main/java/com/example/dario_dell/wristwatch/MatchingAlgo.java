@@ -14,7 +14,7 @@ class MatchingAlgo {
     private static final float EPSILON = 0.2f;
     private static final float ZERO = 0.0f;
     private static final float VEL_NOISE = 0.03f;
-    private static final float ACC_NOISE = 0.4f;
+    private static final float ACC_NOISE = 0.45f;
     private static final float WINDOW_RANGE = 0.25f;
 
 
