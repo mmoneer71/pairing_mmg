@@ -246,7 +246,7 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
 
             case MotionEvent.ACTION_MOVE:
                 velocityTracker.addMovement(event);
-                //pixels/msec - - - change the parameter if you need different units
+                //pixels/sec - - - change the parameter if you need different units
                 velocityTracker.computeCurrentVelocity(1000);
 
                 float velocity_x = velocityTracker.getXVelocity();
@@ -303,12 +303,6 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
     private void resetView(){
 
         updateView(0,0,0,0, 0);
-    }
-
-
-    private void resetXYVelocityAndMagnitudeViews(float max_velocity_x, float max_velocity_y,
-                                                  double velocity_magnitude){
-        updateView(0,0, max_velocity_x, max_velocity_y, 0);
     }
 
 
@@ -388,8 +382,8 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
     // velocityTracker returns pixels/msecs => need to convert to m/sec
     private float toMeterPerSecondsConversion (float velocity, float dpi){
         //max hand speed should be around 65 m/s (Needs to be double-checked)
-        //return velocity*inchToMeterRatio/dpi;   // wrong conversion imo
-        return velocity/dpi/inchToMeterRatio;   // old wrong version as per Dario
+        //return velocity*inchToMeterRatio/dpi;
+        return velocity/dpi/inchToMeterRatio;
     }
 
     private void initBluetooth() {
@@ -405,7 +399,6 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
             // There are paired devices. Get the name and address of each paired device.
             for (BluetoothDevice device : pairedDevices) {
                 if (device.getName().equals(SMARTWATCH_NAME)) {
-                    Log.d(TAG, "smartwatch found");
                     connManager.connect(device);
                 }
             }
