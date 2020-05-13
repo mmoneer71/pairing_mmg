@@ -10,12 +10,12 @@ class MatchingAlgo {
     private static final String TAG = "MatchingAlgo";
 
     private static final int JUMP = 2;
-    private static final float ACCEPTANCE_THRESHOLD = 0.5f;
-    private static final float EPSILON = 0.2f;
+    private static final float ACCEPTANCE_THRESHOLD = 0.65f;
+    private static final float EPSILON = 0.4f;
     private static final float ZERO = 0.0f;
     private static final float VEL_NOISE = 0.03f;
     private static final float ACC_NOISE = 0.45f;
-    private static final float WINDOW_RANGE = 0.25f;
+    private static final float WINDOW_RANGE = 0.2f;
 
 
     private static boolean success = true;
@@ -106,12 +106,11 @@ class MatchingAlgo {
     }
 
 
-    private static List<String> gen2bitGrayCode(List<Float> xInput, List<Float> yInput) {
-        List<String> encodedBits = new ArrayList<>();
+    private static String gen2bitGrayCode(List<Float> xInput, List<Float> yInput) {
+        StringBuilder grayCodeBuilder = new StringBuilder();
         int n = xInput.size(), index = 0;
 
         while (index + JUMP < n) {
-            StringBuilder grayCodeBuilder = new StringBuilder();
             if (xInput.get(index + JUMP) - xInput.get(index) >= 0) {
                 grayCodeBuilder.append("0");
 
@@ -132,15 +131,14 @@ class MatchingAlgo {
                     grayCodeBuilder.append("0");
                 }
             }
-            encodedBits.add(grayCodeBuilder.toString());
             ++index;
         }
 
-        return encodedBits;
+        return grayCodeBuilder.toString();
     }
 
-    private static float compareEncodedStrings(List<String> encodedBitsPhone, List<String> encodedBitsWatch) {
-        int phoneBitsSize = encodedBitsPhone.size(), watchBitsSize = encodedBitsWatch.size();
+    private static float compareEncodedStrings(String encodedBitsPhone, String encodedBitsWatch) {
+        int phoneBitsSize = encodedBitsPhone.length(), watchBitsSize = encodedBitsWatch.length();
         float matchResult = 0.0f;
         boolean watchHasMoreSamples = watchBitsSize > phoneBitsSize;
         int n = watchHasMoreSamples ? phoneBitsSize : watchBitsSize;
@@ -154,11 +152,11 @@ class MatchingAlgo {
             int matchingCodesCount = 0;
             for (int i = 0; i < n; ++i) {
                 if (watchHasMoreSamples) {
-                    if (encodedBitsPhone.get(i).equals(encodedBitsWatch.get(i + walker))) {
+                    if (encodedBitsPhone.charAt(i) == encodedBitsWatch.charAt(i + walker)) {
                         ++matchingCodesCount;
                     }
                 }
-                else if (encodedBitsPhone.get(i + walker).equals(encodedBitsWatch.get(i))) {
+                else if (encodedBitsPhone.charAt(i + walker) == encodedBitsWatch.charAt(i)) {
                     ++matchingCodesCount;
                 }
             }
@@ -166,8 +164,8 @@ class MatchingAlgo {
             float currMatchResult = (float) matchingCodesCount / (float) n;
             Log.i(TAG, "Current match result: " + currMatchResult);
 
-            if (currMatchResult >= ACCEPTANCE_THRESHOLD)
-                return currMatchResult;
+            //if (currMatchResult >= ACCEPTANCE_THRESHOLD)
+            //    return currMatchResult;
 
             if (currMatchResult < EPSILON) {
                 return ZERO;
@@ -203,8 +201,8 @@ class MatchingAlgo {
         List<Float> xVelWatch = MathUtils.cumtrapz(xAcc);
         List<Float> yVelWatch = MathUtils.cumtrapz(yAcc);
 
-        List<String> watchGrayCode = gen2bitGrayCode(xVelWatch, yVelWatch);
-        List<String> phoneGrayCode = gen2bitGrayCode(xVel, yVel);
+        String watchGrayCode = gen2bitGrayCode(xVelWatch, yVelWatch);
+        String phoneGrayCode = gen2bitGrayCode(xVel, yVel);
 
         float matchRatio = compareEncodedStrings(phoneGrayCode, watchGrayCode);
         Log.i(TAG, "Match ratio is: " + matchRatio);
