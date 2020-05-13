@@ -11,29 +11,26 @@ def grey_code_extraction_2bit(a, b):
     if (a is None or len(a) == 0 or b is None or len(b) == 0):
         ValueError(" grey_code_extraction:  invalid parameters ")
     i = 0
-    bits_str = np.array([], dtype = str)
+    bit_str = ''
     while(i + jump < len(a) or i + jump < len(b)):        
         if (a[i + jump] - a[i] >= 0):
-            app_str = '0'
+            bit_str += '0'
             if (b[i + jump]- b[i] >= 0):
-                app_str += '0'
+                bit_str += '0'
             else:
-                app_str += '1'
+                bit_str += '1'
         else:
-            app_str = '1'
+            bit_str += '1'
             if (b[i + jump] - b[i] >= 0):
-                app_str += '1'
+                bit_str += '1'
             else:
-                app_str += '0'
-        bits_str = np.append(bits_str, app_str)
+                bit_str += '0'
         i += 1
-    return bits_str
+    return bit_str
 
 # jump in terms of datapoint used for extracting the grey codedata_watch['x_acc_fin'][firstpeak_index:len(x_dy)]
 jump = 2
-threshold = 0.5
-epsilon = 0.2
-window_range = 0.25
+threshold = 0.69
 zeroes = [0.0, 0.0]
 calib_acc = {'min': -0.45, 'max': 0.45}
 calib_vel = 0.03
@@ -124,56 +121,32 @@ for file_phone in files_phone:
         y_vel = cumtrapz(y_acc_filtered)
         y_vel = [0.0] + y_vel
 
+        x_vel_final = sig.resample(x_vel_filtered, len(x_vel))
+        y_vel_final = sig.resample(y_vel_filtered, len(y_vel))
+        
+        for i in range(0, len(x_vel_final)):
+            if x_vel_final[i] <= calib_vel and x_vel_final[i] >= -calib_vel:
+                x_vel_final[i] = 0
+            if y_vel_final[i] <= calib_vel and y_vel_final[i] >= -calib_vel:
+                y_vel_final[i] = 0
+
         watch_vel_greycode_2bit = grey_code_extraction_2bit(x_vel, y_vel)
-        phone_vel_greycode_2bit = grey_code_extraction_2bit(x_vel_filtered, y_vel_filtered)
+        phone_vel_greycode_2bit = grey_code_extraction_2bit(x_vel_final, y_vel_final)
 
-        match_result = 0.0
-        walker = 0
-        watch_samples_more = len(watch_vel_greycode_2bit) > len(phone_vel_greycode_2bit)
-        n = len(phone_vel_greycode_2bit) if watch_samples_more else len(watch_vel_greycode_2bit)
-        window = abs(len(phone_vel_greycode_2bit) - len(watch_vel_greycode_2bit))
-
-        if window > n * window_range:
-            if file_phone_identifier != file_watch_identifier:
-                success += 1
-            else:
-                print(file_phone_identifier, file_watch_identifier, 'Number of samples mismatch, aborting.')
-                false_negatives += 1
-            continue
-
-        while walker <= window:
-            matching_codes_count = 0
-            for i in range(0, n):
-                if watch_samples_more:
-                    if watch_vel_greycode_2bit[i + walker] == phone_vel_greycode_2bit[i]:
-                        matching_codes_count += 1
-
-                elif watch_vel_greycode_2bit[i] == phone_vel_greycode_2bit[i + walker]:
-                    matching_codes_count += 1
+        matching_codes_count = 0
+        for i in range(0, len(phone_vel_greycode_2bit)):
+            if watch_vel_greycode_2bit[i] == phone_vel_greycode_2bit[i]:
+                matching_codes_count += 1
             
-            curr_match_result = matching_codes_count / n
-            
-            if curr_match_result >= threshold:
-                match_result = curr_match_result
-                break
-
-            if curr_match_result < epsilon:
-                match_result = 0.0
-                break
-            
-            if curr_match_result > match_result:
-                match_result = curr_match_result
-            
-            walker += 1
-
+        match_result = matching_codes_count / len(phone_vel_greycode_2bit)
         if file_phone_identifier == file_watch_identifier:
-            if match_result >= threshold:
+            if match_result > threshold:
                 success += 1
             else:
                 print(file_phone_identifier, file_watch_identifier, str(match_result))
                 false_negatives += 1
         else:
-            if match_result < threshold:
+            if match_result <= threshold:
                 success += 1
             else:
                 print(file_phone_identifier, file_watch_identifier, str(match_result))
