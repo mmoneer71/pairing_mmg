@@ -164,12 +164,8 @@ class MatchingAlgo {
             float currMatchResult = (float) matchingCodesCount / (float) n;
             Log.i(TAG, "Current match result: " + currMatchResult);
 
-            //if (currMatchResult >= ACCEPTANCE_THRESHOLD)
-            //    return currMatchResult;
-
-            if (currMatchResult < EPSILON) {
-                return ZERO;
-            }
+            if (currMatchResult >= ACCEPTANCE_THRESHOLD || currMatchResult < EPSILON)
+                return currMatchResult;
 
             if (currMatchResult > matchResult) {
                 matchResult = currMatchResult;

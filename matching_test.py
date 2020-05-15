@@ -157,7 +157,7 @@ for file_phone in files_phone:
                 break
 
             if curr_match_result < epsilon:
-                match_result = 0.0
+                match_result = curr_match_result
                 break
             
             if curr_match_result > match_result:
@@ -166,13 +166,13 @@ for file_phone in files_phone:
             walker += 1
 
         if file_phone_identifier == file_watch_identifier:
-            if match_result > threshold:
+            if match_result >= threshold:
                 success += 1
             else:
                 print(file_phone_identifier, file_watch_identifier, str(match_result))
                 false_negatives += 1
         else:
-            if match_result <= threshold:
+            if match_result < threshold:
                 success += 1
             else:
                 print(file_phone_identifier, file_watch_identifier, str(match_result))
