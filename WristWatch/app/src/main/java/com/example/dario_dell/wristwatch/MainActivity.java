@@ -1,17 +1,14 @@
 package com.example.dario_dell.wristwatch;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.hardware.Sensor;
-import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.support.v4.app.ActivityCompat;
 import android.support.wearable.activity.WearableActivity;
 import android.util.Log;
-import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
 
 import java.io.File;
@@ -19,19 +16,14 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends WearableActivity implements AccelerationSensorObserver, LinearAccelerationSensorObserver, Runnable{
 
     //view components
-    private TextView instructionsTxtView, waitTxtView, goTxtView;
-    private Button startBtn;
+    private TextView instructionsTxtView;
 
-    private SensorManager senSensorManager;
-    private Sensor senAccelerometer;
-
-    //needed for changing the button functionality
-    private boolean isStart = true;
-    private boolean justStarted = true;
     private String folder_name = "/Accelerometer_Data/";
 
     //needed for providing unique names to the files
@@ -41,33 +33,20 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
     private final String filename_separator = "_";
     private final String filename_suffix = "watch_sample";
     private final String filename_format = ".csv";
-    String text_separator = ",";
 
     // resulting string to write into a CSV file
     // Init: CSV file header
     String header = "seq_number,timestamp,x_acc,y_acc,z_acc,x_lin_acc,y_lin_acc,z_lin_acc\n";
 
     //variables needed for detecting the Shaking Gesture
-    private long lastUpdate = 0;
-    private long startTime = 0;
-    private float x_acc, y_acc, z_acc;
     private float[] acceleration = new float[3];
     // https://stackoverflow.com/questions/15158769/android-acceleration-direction
     private float[] linearAcceleration = new float[3];
-    private long curTime = 0;
-    private int samplesCount = 0;
-    private float x_calibration = 0, y_calibration = 0, z_calibration = 0;
-
-    //sensitivity for detecting the Shaking Gesture
-    private static final int SHAKE_THRESHOLD = 0;
-    /* In order to have samples at 100Hz frequency.
-    This way (according to the Nyquist-Shannon theorem)
-    no actual information is lost in the sampling process
-    when reconstructing the 50Hz signal.
-    Change it if you need a different frequency */
+    private boolean isStable = false;
 
 
     private final int MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL = 1;
+    private final int REQUEST_ENABLE_BT = 1;
     private long logTime = 0;
     private int generation = 0;
     private boolean logData = false;
@@ -82,6 +61,9 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
     private MagneticSensor magneticSensor;
     private LinearAccelerationSensor linearAccelerationSensor;
 
+    private ConnManager connManager;
+    List<Float> x_lin_acc, y_lin_acc;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,8 +72,6 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         setContentView(R.layout.activity_main);
 
         instructionsTxtView = findViewById(R.id.instructions);
-        waitTxtView = findViewById(R.id.wait);
-        goTxtView = findViewById(R.id.go);
 
         accelerationSensor = new AccelerationSensor(this);
         linearAccelerationSensor = new LinearAccelerationSensor();
@@ -103,38 +83,14 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         handler = new Handler();
         log = "";
 
+        checkExternalWritePermission();
 
-        if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL);
-        }
+        connManager = new ConnManager();
+        initBluetooth();
 
+        x_lin_acc = new ArrayList<>();
+        y_lin_acc = new ArrayList<>();
 
-        startBtn = findViewById(R.id.startBtn);
-        startBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                writeToFile();
-                log = "";
-                logData = false;
-                /*if (isStart){
-                    instructionsTxtView.setVisibility(View.INVISIBLE);
-					goTxtView.setVisibility(View.VISIBLE);
-                    startBtn.setText("STOP");
-
-
-                } else {
-                    //View update
-                    startBtn.setText("START");
-                    instructionsTxtView.setVisibility(View.VISIBLE);
-                    waitTxtView.setVisibility(View.INVISIBLE);
-                    goTxtView.setVisibility(View.INVISIBLE);
-                    logData = false;
-
-                }
-                isStart = !isStart;*/
-            }
-        });
     }
 
     //unregister the sensor when the application hibernates
@@ -181,18 +137,66 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         System.arraycopy(linearAcceleration, 0, this.linearAcceleration, 0,
                 linearAcceleration.length);
 
-        if (!linearAccelerationSensor.getFusionSystemStability()) {
-            Log.d("Calibration", "Still calibrating...");
-            return;
-        }
-        startBtn.setEnabled(true);
-        logData = true;
+
     }
 
     @Override
     public void run() {
         handler.postDelayed(this, 20);
+        if (!isStable) {
+            checkStability();
+        }
         logData();
+
+        if (connManager.isNoisyInputCollected()) {
+            initPairing();
+            handler.removeCallbacks(this);
+        }
+    }
+
+    private void checkExternalWritePermission() {
+        if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL);
+        }
+
+    }
+
+    private boolean checkPairingProgress() {
+        return connManager.isPairingComplete();
+    }
+
+    private void checkStability() {
+        if (!linearAccelerationSensor.getFusionSystemStability() ||
+                !connManager.isKeyExchangeDone()) {
+            Log.d("Calibration", "Still calibrating...");
+            return;
+        }
+        logData = true;
+        instructionsTxtView.setText(R.string.drawing);
+        isStable = true;
+    }
+
+    private void initPairing() {
+        connManager.setNoisyInput(x_lin_acc, y_lin_acc);
+        writeToFile();
+        log = "";
+        logData = false;
+        x_lin_acc.clear();
+        y_lin_acc.clear();
+        instructionsTxtView.setText(R.string.pairing);
+
+        while (!checkPairingProgress());
+
+
+        boolean pairingResult = connManager.getPairingResult();
+        if (pairingResult) {
+            instructionsTxtView.setText(R.string.success);
+        }
+        else {
+            instructionsTxtView.setText(R.string.failure);
+        }
     }
 
     private void logData() {
@@ -200,6 +204,10 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
             if (generation == 0) {
                 logTime = System.currentTimeMillis();
             }
+
+
+            x_lin_acc.add(linearAcceleration[0]);
+            y_lin_acc.add(linearAcceleration[1]);
 
             log += generation++ + ",";
             log += System.currentTimeMillis() - logTime + ",";
@@ -211,8 +219,8 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
             log += linearAcceleration[1] + ",";
             log += linearAcceleration[2];
 
-            Log.d("Generation", String.valueOf(generation));
-            Log.d("Fused Linear Acceleration", linearAcceleration[0] + " " + linearAcceleration[1]  + " " + linearAcceleration[2]);
+            //Log.d("Generation", String.valueOf(generation));
+            //Log.d("Fused Linear Acceleration", linearAcceleration[0] + " " + linearAcceleration[1]  + " " + linearAcceleration[2]);
             log += System.getProperty("line.separator");
         }
     }
@@ -295,4 +303,13 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         return ++filename_counter;
     }
 
+
+    private void initBluetooth() {
+        // Register for broadcasts when a device is discovered.
+        Intent enableBtIntent = connManager.checkIfEnabled();
+        if (enableBtIntent != null) {
+            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        }
+        connManager.accept();
+    }
 }

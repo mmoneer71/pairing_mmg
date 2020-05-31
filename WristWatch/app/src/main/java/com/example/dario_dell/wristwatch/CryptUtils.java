@@ -1,0 +1,263 @@
+package com.example.dario_dell.wristwatch;
+
+
+import android.util.Log;
+
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Iterator;
+import java.util.List;
+
+import javax.crypto.Cipher;
+import javax.crypto.spec.DHParameterSpec;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+
+public class CryptUtils {
+
+
+    private final static String TAG = "CryptUtils";
+    // Key size
+    static final int KEY_SIZE = 1024;
+    // Hash function output size
+    static final int HASH_SIZE = 512;
+    // Unique ID byte size
+    static final int ID_SIZE = 288;
+    // Generator: Has to be primitive root
+    private BigInteger g;
+    // Prime value
+    private BigInteger p;
+    // Public key component
+    private BigInteger pub;
+    // Private key component
+    private BigInteger priv;
+    // Current session Key
+    private SecretKeySpec sessionKey;
+    // Current session nonce
+    private BigInteger nonce;
+    // Current commitment opening
+    private byte[] commitmentOpening;
+    // Latest decrypted commitment received from other device
+    private byte[] decryptedCommitment;
+
+    // Parameters extraction based on:
+    // https://stackoverflow.com/questions/19323178/how-to-do-diffie-hellman-key-generation-and-retrieve-raw-key-bytes-in-java
+    void initDHParams() {
+        try {
+            // Generate a DH key pair
+            KeyPairGenerator gen = KeyPairGenerator.getInstance("DH");
+            gen.initialize(KEY_SIZE);
+            KeyPair keyPair = gen.genKeyPair();
+
+            // Separate the private and the public key from the key pair
+            priv = ((javax.crypto.interfaces.DHPrivateKey) keyPair.getPrivate()).getX();
+            pub = ((javax.crypto.interfaces.DHPublicKey) keyPair.getPublic()).getY();
+
+            // Extract the safe prime and the generator number from the key pair
+            DHParameterSpec params = ((javax.crypto.interfaces.DHPublicKey) keyPair.getPublic()).getParams();
+            p = params.getP();
+            g = params.getG();
+        } catch (NoSuchAlgorithmException e) {
+            Log.e(TAG, "Error occurred when creating the Diffie-Hellman params", e);
+        }
+
+    }
+
+    void setDHParams() {
+        p = new BigInteger("158226922697030617948797227800498624915189325504023952753861279447483239021860246817118586173001979901983796625583670102839781534905294538416934403704582647288855845359398886205261258488868149392541793104557804708023361921748188126306804286723526796069672484804981694321100425357802703970505567917675490154159");
+        g = new BigInteger("88173088025497969607285612227517451555521798225119643685974814908304000890896133241125234093687057175629737474938680821119549216182920507795942634570963329026513429453884778473255437919969740174644539207004023810453975179883613841204932790018405615190065694910358431372613294863132989048355311612311291989235");
+        genNonce();
+    }
+
+    BigInteger genKeyPair() {
+        do {
+            this.priv = new BigInteger(KEY_SIZE, (new SecureRandom()));
+
+            // Compute the public key component y
+            this.pub = this.g.modPow(priv, this.p);
+        } while (this.pub.toByteArray().length != KEY_SIZE / 8 || this.priv.toByteArray().length != KEY_SIZE / 8);
+
+        return this.pub;
+    }
+
+    private void genNonce() {
+        do {
+            nonce = new BigInteger(KEY_SIZE, (new SecureRandom()));
+        } while (nonce.toByteArray().length != KEY_SIZE / 8);
+
+    }
+
+    void computeSessionKey(BigInteger pubComponent) {
+
+        if (this.sessionKey != null) {
+            return;
+        }
+
+        try {
+            // Compute the key: dhKey = (dh_pubComponent ^ dh_privKey) mod dh_P
+            BigInteger dhKey = pubComponent.modPow(this.priv, this.p);
+
+            // Compress the key to 256 bits by deriving it with a hash function
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] dhKeyComp = digest.digest(dhKey.toByteArray());
+
+            // Return an AES-256 key
+            sessionKey = new SecretKeySpec(dhKeyComp, "AES");
+
+
+        } catch (NoSuchAlgorithmException e) {
+            Log.e(TAG, "Error occurred when generating the session key", e);
+        }
+
+    }
+
+    private byte[] SHA512(byte[] msg) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-512");
+            return digest.digest(msg);
+
+        } catch (NoSuchAlgorithmException e) {
+            Log.e(TAG, "Error occurred when generating the hashed message", e);
+            return null;
+        }
+    }
+
+    byte[] genCommitment(String id,
+                         List<Float>noisyInputX,
+                         List<Float>noisyInputY) {
+
+
+        byte[] idBytes = id.getBytes();
+        byte[] nonceBytes = nonce.toByteArray();
+        byte[] sessionKeyBytes = sessionKey.getEncoded();
+        byte[] noisyInputXBytes = floatListToByteArray(noisyInputX);
+        byte[] noisyInputYBytes = floatListToByteArray(noisyInputY);
+
+
+        this.commitmentOpening = mergeArrays(idBytes, noisyInputXBytes, noisyInputYBytes, nonceBytes);
+        byte[] commitmentMsg = mergeArrays(this.commitmentOpening, sessionKeyBytes);
+        return SHA512(commitmentMsg);
+    }
+
+    byte[] openCommitment() {
+        return crypt(this.commitmentOpening, sessionKey, Cipher.ENCRYPT_MODE);
+    }
+
+    boolean verifyCommitment(byte[] commitmentOpening, String commitmentHash, String uniqueId) {
+        this.decryptedCommitment = crypt(commitmentOpening, sessionKey, Cipher.DECRYPT_MODE);
+        if (this.decryptedCommitment == null) {
+            return false;
+        }
+
+        String decryptedUniqueId = new String(Arrays.copyOfRange(this.decryptedCommitment, 0, ID_SIZE / 8));
+        if (uniqueId.equals(decryptedUniqueId)) {
+            return false;
+        }
+        byte[] commitmentToVerify = mergeArrays(this.decryptedCommitment, sessionKey.getEncoded());
+
+        return Arrays.equals(SHA512(commitmentToVerify), Base64.getDecoder().decode(commitmentHash));
+    }
+
+    void getDecryptedNoisyInput(List<Float> noisyInputX, List<Float> noisyInputY) {
+
+        int noisyInputSize = (decryptedCommitment.length - ID_SIZE / 8 - KEY_SIZE / 8) / 2;
+
+        byte[] noisyInputXBytes = Arrays.copyOfRange(this.decryptedCommitment, ID_SIZE / 8,
+                ID_SIZE / 8 + noisyInputSize);
+        byte[] noisyInputYBytes = Arrays.copyOfRange(this.decryptedCommitment, ID_SIZE / 8 + noisyInputSize,
+                ID_SIZE / 8 + 2 * noisyInputSize);
+
+        for (int i = 0; i < noisyInputSize; i += Float.SIZE / 8) {
+            ByteBuffer inputXBuffer = ByteBuffer.wrap(Arrays.copyOfRange(noisyInputXBytes, i, i + Float.SIZE / 8));
+            ByteBuffer inputYBuffer = ByteBuffer.wrap(Arrays.copyOfRange(noisyInputYBytes, i, i + Float.SIZE / 8));
+
+            noisyInputX.add(inputXBuffer.getFloat());
+            noisyInputY.add(inputYBuffer.getFloat());
+        }
+    }
+
+    private byte[] crypt(byte[] msg, SecretKeySpec key, int mode) {
+        try {
+            // Set the cipher with the crypto primitive (AES), mode of operation (CBC) and padding scheme (PKCS5PADDING)
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+
+            // Set the initialization vector for CBC
+            byte[] ivBytes = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+            IvParameterSpec iv = new IvParameterSpec(ivBytes);
+
+            // Initialize the cipher with the symmetric key and initialization vector
+            cipher.init(mode, key, iv);
+
+            // Do the encryption and return the ciphertext encoded into a Base64 string
+            // Or do the decryption and return the plaintext
+            switch (mode) {
+                case Cipher.ENCRYPT_MODE:
+                    byte[] msgEncrypted = cipher.doFinal(msg);
+                    return Base64.getEncoder().encode(msgEncrypted);
+                case Cipher.DECRYPT_MODE:
+                    return cipher.doFinal(Base64.getDecoder().decode(msg));
+            }
+        }
+        catch (Exception e) {
+            Log.e(TAG, "Error occurred during encryption/decryption", e);
+            return null;
+        }
+        return null;
+    }
+
+    byte[] mergeArrays(byte[]... arrays)
+    {
+        int finalLength = 0;
+        for (byte[] array : arrays) {
+            finalLength += array.length;
+        }
+
+        byte[] dest = null;
+        int destPos = 0;
+
+        for (byte[] array : arrays)
+        {
+            if (dest == null) {
+                dest = Arrays.copyOf(array, finalLength);
+                destPos = array.length;
+            } else {
+                System.arraycopy(array, 0, dest, destPos, array.length);
+                destPos += array.length;
+            }
+        }
+        return dest;
+    }
+
+    private byte[] floatListToByteArray(List<Float> input) {
+
+        List<Byte>resBytes = new ArrayList<>();
+        for (Float val: input) {
+            byte[] valBytes = ByteBuffer.allocate(Float.SIZE / 8).putFloat(val).array();
+
+            for (byte byteVal : valBytes) {
+                resBytes.add(byteVal);
+            }
+        }
+
+        return convertBytes(resBytes);
+    }
+
+    private byte[] convertBytes(List<Byte> bytes)
+    {
+        byte[] ret = new byte[bytes.size()];
+        Iterator<Byte> iterator = bytes.iterator();
+        for (int i = 0; i < ret.length; i++)
+        {
+            ret[i] = iterator.next();
+        }
+        return ret;
+    }
+}

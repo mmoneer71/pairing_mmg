@@ -65,6 +65,26 @@
             android:text="@string/velocity_magnitude"
             android:textSize="16sp"/>
 
+        <ProgressBar
+            android:id="@+id/indeterminateBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_centerHorizontal="true"
+
+            />
+
+        <TextView
+            android:id="@+id/pleaseWait"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignStart="@id/indeterminateBar"
+            android:layout_below="@id/indeterminateBar"
+            android:layout_alignEnd="@id/indeterminateBar"
+            android:background="@android:color/transparent"
+            android:text="@string/pleaseWait"
+            />
+
     </RelativeLayout>
 
 </android.support.constraint.ConstraintLayout>

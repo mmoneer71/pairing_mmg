@@ -1,29 +1,40 @@
 package com.example.dario_dell.smartphone;
 
 import android.Manifest;
+import android.bluetooth.BluetoothDevice;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Message;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
+import android.view.View;
+import android.view.WindowManager;
+import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 public class MainActivity extends AppCompatActivity implements ViewWasTouchedListener, Runnable {
 
     private TextView velocity_x_txtView, velocity_y_txtView,
-            maxVelocity_x_txtView, maxVelocity_y_txtView, velocity_magnitude_txtView;
+            maxVelocity_x_txtView, maxVelocity_y_txtView, velocity_magnitude_txtView, pleaseWaitTxtView;
     private DrawingView drawing;
+    private ProgressBar progressBar;
 
     //needed for providing unique names to the files
     private int filename_counter = 0;
@@ -38,10 +49,15 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
     private final int MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL = 1;
     private final static String TAG = "SMARTPHONE_APP";
 
+
+    private ConnManager connManager;
+    private final int REQUEST_ENABLE_BT = 1;
+    private final static String SMARTWATCH_NAME = "TicWatch Pro 0306";
+    private final Message noisyInputMsg = new Message();
+
     // resulting string to write into a CSV file
     // Init: CSV file header
     String header = "seq_number,timestamp,x,y,x_velocity,y_velocity,x_velocity_filtered,y_velocity_filtered\n";
-    String text_separator = ",";
 
     private VelocityTracker velocityTracker = null;
     private float max_velocity_x, max_velocity_y;
@@ -58,6 +74,9 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
     private Handler handler;
     private boolean logData = false;
     private String log = "";
+    List<Float> x_velocity, y_velocity;
+    private boolean isInitialized = false;
+    private boolean pairingDone = false;
 
 
     @Override
@@ -70,27 +89,76 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
         maxVelocity_x_txtView = findViewById(R.id.maxvelocityx);
         maxVelocity_y_txtView = findViewById(R.id.maxvelocityy);
         velocity_magnitude_txtView = findViewById(R.id.velocity_magnitude);
+        progressBar = findViewById(R.id.indeterminateBar);
+        pleaseWaitTxtView = findViewById(R.id.pleaseWait);
         drawing = findViewById(R.id.drawing);
         drawing.setWasTouchedListener(this);
         resetView();
 
-        if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL);
-        }
 
         handler = new Handler();
         handler.post(this);
         meanFilterVelocity = new MeanFilter();
         meanFilterVelocity.setWindowSize(10);
+        x_velocity = new ArrayList<>();
+        y_velocity = new ArrayList<>();
+
+        connManager = new ConnManager(noisyInputMsg);
+        checkExternalWritePermission();
+        initBluetooth();
+        initProgressBar("", false);
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+    }
+
 
 
     @Override
     public void run() {
-        handler.postDelayed(this, 30);
-        logData();
+        handler.postDelayed(this, 20);
+        if (!isInitialized) {
+            checkInitProgress();
+        }
+
+        if (!pairingDone) {
+            checkPairingProgress();
+        }
+    }
+
+    private void checkInitProgress() {
+        if (connManager.isKeyExchangeDone()) {
+            progressBar.setVisibility(View.GONE);
+            pleaseWaitTxtView.setVisibility(View.GONE);
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+            isInitialized = true;
+        }
+    }
+
+    private void checkPairingProgress() {
+        if (connManager.isPairingComplete()) {
+            progressBar.setVisibility(View.GONE);
+            pleaseWaitTxtView.setVisibility(View.GONE);
+            boolean pairingResult = connManager.getPairingResult();
+            if (pairingResult) {
+                Toast.makeText(getApplicationContext(), "Pairing successful!", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(getApplicationContext(), "Pairing failed.", Toast.LENGTH_LONG).show();
+            }
+            pairingDone = true;
+        }
+    }
+
+    private void initProgressBar(String text, boolean setText) {
+        progressBar.setVisibility(View.VISIBLE);
+        pleaseWaitTxtView.setVisibility(View.VISIBLE);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+        if (setText) {
+            pleaseWaitTxtView.setText(text);
+        }
     }
 
     private void logData() {
@@ -98,6 +166,12 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
             if (generation == 0) {
                 logTime = System.currentTimeMillis();
             }
+
+            x_velocity.add(filtered_velocity[0]);
+            // Multiply velocity by -1 since +ve and -ve axes
+            // are the opposite of the ones on the watch
+            y_velocity.add(filtered_velocity[1] * -1);
+
             log += generation++ + ",";
             log += System.currentTimeMillis() - logTime + ",";
 
@@ -107,11 +181,36 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
             log += velocity[1] + ",";
             log += filtered_velocity[0] + ",";
             log += filtered_velocity[1];
-
-            Log.d("Generation", String.valueOf(generation));
-            Log.d("Filtered Velocity", filtered_velocity[0] + " " + filtered_velocity[1]);
             log += System.getProperty("line.separator");
         }
+    }
+
+    private void checkExternalWritePermission() {
+        if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL);
+        }
+    }
+
+    private void notifyNoisyInputCollected() {
+        connManager.setNoisyInput(x_velocity, y_velocity);
+        synchronized (noisyInputMsg) {
+            noisyInputMsg.notify();
+        }
+        writeToFile();
+    }
+
+    private void clear() {
+        velocityTracker.recycle();
+        velocityTracker = null;
+        initProgressBar("Pairing in progress, please wait", true);
+        generation = 0;
+        log = "";
+        logData = false;
+        x_velocity.clear();
+        y_velocity.clear();
+        resetView();
     }
 
     @Override
@@ -120,7 +219,7 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
 
         int action = event.getActionMasked();
         metrics = getResources().getDisplayMetrics();
-        Log.d(TAG, "dpi: " + metrics.xdpi*metrics.ydpi);
+        //Log.d(TAG, "dpi: " + metrics.xdpi*metrics.ydpi);
         //System.out.println(metrics.xdpi*metrics.ydpi);
         //Log.d(TAG, "x-dpi:" + metrics.xdpi);
         //Log.d(TAG, "y-dpi:" + metrics.ydpi);
@@ -147,7 +246,7 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
 
             case MotionEvent.ACTION_MOVE:
                 velocityTracker.addMovement(event);
-                //pixels/msec - - - change the parameter if you need different units
+                //pixels/sec - - - change the parameter if you need different units
                 velocityTracker.computeCurrentVelocity(1000);
 
                 float velocity_x = velocityTracker.getXVelocity();
@@ -169,27 +268,16 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
 
                 filtered_velocity = meanFilterVelocity.filterFloat(velocity);
 
+                logData();
+
                 updateView(velocity_x, velocity_y, max_velocity_x, max_velocity_y, magnitude);
-                /*to_write += generation++ + text_separator +
-                        (System.currentTimeMillis() - logTime) + text_separator +
-                        x/metrics.xdpi/inchToMeterRatio + text_separator +
-                        y/metrics.ydpi/inchToMeterRatio + text_separator +
-                        velocity[0] + text_separator +
-                        velocity[1] + text_separator +
-                        filtered_velocity[0] + text_separator +
-                        filtered_velocity[1] + "\n";*/
                 break;
 
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
                 velocityTracker.addMovement(event);
-                velocityTracker.recycle();
-                velocityTracker = null;
-                writeToFile();
-                generation = 0;
-                log = "";
-                logData = false;
-                resetView();
+                notifyNoisyInputCollected();
+                clear();
                 break;
         }
         // Calling invalidate will cause the onDraw method to execute
@@ -215,12 +303,6 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
     private void resetView(){
 
         updateView(0,0,0,0, 0);
-    }
-
-
-    private void resetXYVelocityAndMagnitudeViews(float max_velocity_x, float max_velocity_y,
-                                                  double velocity_magnitude){
-        updateView(0,0, max_velocity_x, max_velocity_y, 0);
     }
 
 
@@ -300,8 +382,29 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
     // velocityTracker returns pixels/msecs => need to convert to m/sec
     private float toMeterPerSecondsConversion (float velocity, float dpi){
         //max hand speed should be around 65 m/s (Needs to be double-checked)
-        //return velocity*inchToMeterRatio/dpi;   // wrong conversion imo
-        return velocity/dpi/inchToMeterRatio;   // old wrong version as per Dario
+        //return velocity*inchToMeterRatio/dpi;
+        return velocity/dpi/inchToMeterRatio;
     }
+
+    private void initBluetooth() {
+        // Register for broadcasts when a device is discovered.
+        Intent enableBtIntent = connManager.checkIfEnabled();
+        if (enableBtIntent != null) {
+            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        }
+
+        Set<BluetoothDevice> pairedDevices = connManager.getBluetoothAdapter().getBondedDevices();
+
+        if (pairedDevices.size() > 0) {
+            // There are paired devices. Get the name and address of each paired device.
+            for (BluetoothDevice device : pairedDevices) {
+                if (device.getName().equals(SMARTWATCH_NAME)) {
+                    connManager.connect(device);
+                }
+            }
+        }
+
+    }
+
 
 }
