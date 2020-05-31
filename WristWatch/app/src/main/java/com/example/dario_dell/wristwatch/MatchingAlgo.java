@@ -43,7 +43,7 @@ class MatchingAlgo {
 
 
     private static void filterNoise(List<Float> xInput, List<Float> yInput, int signalType) {
-        int n = xInput.size(), startIndex;
+        int n = xInput.size(), startIndex, endIndex;
 
         float upperLimit, lowerLimit;
         List<Integer> xIndices = new ArrayList<>(), yIndices = new ArrayList<>();
@@ -84,12 +84,16 @@ class MatchingAlgo {
         }
         else if (xIndices.size() == 0) {
             startIndex = yIndices.get(0);
+            endIndex = yIndices.get(yIndices.size() - 1);
         }
         else if (yIndices.size() == 0) {
             startIndex = xIndices.get(0);
+            endIndex = xIndices.get(xIndices.size() - 1);
         }
         else {
             startIndex = xIndices.get(0) < yIndices.get(0) ? xIndices.get(0) : yIndices.get(0);
+            endIndex = xIndices.get(xIndices.size() - 1) > yIndices.get(yIndices.size() - 1)
+                    ? xIndices.get(xIndices.size() - 1) : yIndices.get(yIndices.size() - 1);
         }
 
 
@@ -99,8 +103,8 @@ class MatchingAlgo {
         }
 
         if (signalType == SignalTypes.SIGNAL_ACC) {
-            xAcc = xInput.subList(startIndex, xInput.size());
-            yAcc = yInput.subList(startIndex, yInput.size());
+            xAcc = xInput.subList(startIndex, endIndex + 1);
+            yAcc = yInput.subList(startIndex, endIndex + 1);
         }
 
     }
