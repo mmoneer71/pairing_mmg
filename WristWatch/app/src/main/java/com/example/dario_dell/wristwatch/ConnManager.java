@@ -231,6 +231,8 @@ class ConnManager {
             }
             Log.i(TAG, "3rd phase finished after: " + (System.currentTimeMillis() - startTime));
 
+            while (System.currentTimeMillis() - startTime < DELTA_T1 + DELTA_T2);
+
             // Read other device's commitment opening size
             mmBuffer = new byte[Integer.SIZE / 8];
             read();
@@ -266,13 +268,8 @@ class ConnManager {
                     decryptedNoisyInputX,
                     decryptedNoisyInputY);
 
-            if (System.currentTimeMillis() - startTime > DELTA_T2) {
-                Log.e(TAG, "Time violation on delta2");
-                pairingStatus = false;
-            }
-            Log.i(TAG, "4th phase finished after: " + (System.currentTimeMillis() - startTime));
-            pairingComplete = true;
 
+            pairingComplete = true;
         }
 
         private void read() {

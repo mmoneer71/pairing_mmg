@@ -212,6 +212,7 @@ class ConnManager {
             // Read other's device commitment
             mmBuffer = new byte[CryptUtils.HASH_SIZE / 8];
             read();
+            String otherCommitment = Base64.getEncoder().encodeToString(mmBuffer);
 
             if (System.currentTimeMillis() - startTime > DELTA_T1) {
                 Log.e(TAG, "Time violation on delta1");
@@ -221,8 +222,7 @@ class ConnManager {
             }
             Log.i(TAG, "3rd phase finished after: " + (System.currentTimeMillis() - startTime));
 
-            String otherCommitment = Base64.getEncoder().encodeToString(mmBuffer);
-
+            while (System.currentTimeMillis() - startTime < DELTA_T1 + DELTA_T2);
 
             // Commitment Opening
             byte[] myCommitmentOpening = cryptUtils.openCommitment();
@@ -260,11 +260,6 @@ class ConnManager {
                     noisyInputX,
                     noisyInputY);
 
-            if (System.currentTimeMillis() - startTime > DELTA_T2) {
-                Log.e(TAG, "Time violation on delta2");
-                pairingStatus = false;
-            }
-            Log.i(TAG, "4th phase finished after: " + (System.currentTimeMillis() - startTime));
             pairingComplete = true;
         }
 
