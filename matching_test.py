@@ -28,9 +28,38 @@ def grey_code_extraction_2bit(a, b):
         i += 1
     return bit_str
 
+def grey_code_extraction_3bit(a, b):
+    if (a is None or len(a)==0 or b is None or len(b)==0):
+        ValueError(" grey_code_extraction:  invalid parameters ")
+    i = 0
+    bits_str = ''
+    while(i + jump < len(a) or i + jump < len(b)):        
+        if (a[i + jump] - a[i] >= 0) and (b[i + jump] - b[i] >= 0):
+            if abs(b[i + jump] - b[i]) <= abs(a[i + jump] - a[i]):
+                bits_str += '000'
+            else:
+                bits_str += '001'
+        elif (a[i + jump] - a[i] < 0) and (b[i + jump] - b[i] >= 0):
+            if abs(b[i + jump] - b[i]) > abs(a[i + jump] - a[i]):
+                bits_str += '011'
+            else:
+                bits_str += '010'
+        elif (a[i + jump] - a[i] < 0) and (b[i + jump] - b[i] < 0):
+            if abs(b[i + jump] - b[i]) <= abs(a[i + jump] - a[i]):
+                bits_str += '110'
+            else:
+                bits_str += '111'
+        else:
+            if abs(b[i + jump] - b[i]) > abs(a[i + jump] - a[i]):
+                bits_str += '101'
+            else:
+                bits_str += '100'
+        i += 1
+    return bits_str
+
 # jump in terms of datapoint used for extracting the grey codedata_watch['x_acc_fin'][firstpeak_index:len(x_dy)]
 jump = 2
-threshold = 0.65
+threshold = 0.7
 epsilon = 0.4
 window_range = 0.2
 zeroes = [0.0, 0.0]
@@ -123,14 +152,14 @@ for file_phone in files_phone:
         y_vel = cumtrapz(y_acc_filtered)
         y_vel = [0.0] + y_vel
 
-        watch_vel_greycode_2bit = grey_code_extraction_2bit(x_vel, y_vel)
-        phone_vel_greycode_2bit = grey_code_extraction_2bit(x_vel_filtered, y_vel_filtered)
+        watch_vel_greycode = grey_code_extraction_3bit(x_vel, y_vel)
+        phone_vel_greycode = grey_code_extraction_3bit(x_vel_filtered, y_vel_filtered)
 
         match_result = 0.0
         walker = 0
-        watch_samples_more = len(watch_vel_greycode_2bit) > len(phone_vel_greycode_2bit)
-        n = len(phone_vel_greycode_2bit) if watch_samples_more else len(watch_vel_greycode_2bit)
-        window = abs(len(phone_vel_greycode_2bit) - len(watch_vel_greycode_2bit))
+        watch_samples_more = len(watch_vel_greycode) > len(phone_vel_greycode)
+        n = len(phone_vel_greycode) if watch_samples_more else len(watch_vel_greycode)
+        window = abs(len(phone_vel_greycode) - len(watch_vel_greycode))
 
         if window > n * window_range:
             if file_phone_identifier != file_watch_identifier:
@@ -144,10 +173,10 @@ for file_phone in files_phone:
             matching_codes_count = 0
             for i in range(0, n):
                 if watch_samples_more:
-                    if watch_vel_greycode_2bit[i + walker] == phone_vel_greycode_2bit[i]:
+                    if watch_vel_greycode[i + walker] == phone_vel_greycode[i]:
                         matching_codes_count += 1
 
-                elif watch_vel_greycode_2bit[i] == phone_vel_greycode_2bit[i + walker]:
+                elif watch_vel_greycode[i] == phone_vel_greycode[i + walker]:
                     matching_codes_count += 1
             
             curr_match_result = matching_codes_count / n
