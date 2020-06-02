@@ -59,11 +59,11 @@ def grey_code_extraction_3bit(a, b):
 
 # jump in terms of datapoint used for extracting the grey codedata_watch['x_acc_fin'][firstpeak_index:len(x_dy)]
 jump = 2
-threshold = 0.72
+threshold = 0.65
 epsilon = 0.4
 window_range = 0.2
 zeroes = [0.0, 0.0]
-calib_acc = {'min': -0.2, 'max': 0.2}
+calib_acc = {'min': -0.4, 'max': 0.4}
 calib_vel = 0.03
 
 
@@ -152,8 +152,8 @@ for file_phone in files_phone:
         y_vel = cumtrapz(y_acc_filtered)
         y_vel = [0.0] + y_vel
 
-        watch_vel_greycode = grey_code_extraction_3bit(x_vel, y_vel)
-        phone_vel_greycode = grey_code_extraction_3bit(x_vel_filtered, y_vel_filtered)
+        watch_vel_greycode = grey_code_extraction_2bit(x_vel, y_vel)
+        phone_vel_greycode = grey_code_extraction_2bit(x_vel_filtered, y_vel_filtered)
 
         match_result = 0.0
         walker = 0
@@ -209,9 +209,35 @@ for file_phone in files_phone:
 
         
 print('-------------------------------')
-print('Result using 3-bit encoding:')
+print('Result using 2-bit encoding:')
 print('Total tests:', success + false_positives + false_negatives)
 print('Success:', success)
 print('False positives:', false_positives)
 print('False negatives:', false_negatives)
 print('-------------------------------')
+
+###################################Acceleration######################################
+#x_acc = np.diff(x_vel_filtered)
+#y_acc = np.diff(y_vel_filtered)
+
+
+#x_acc = sig.resample(x_acc, len(x_acc_filtered))
+#y_acc = sig.resample(y_acc, len(y_acc_filtered))
+
+
+
+#watch_acc_greycode_2bit = grey_code_extraction_2bit(x_acc_filtered, y_acc_filtered)
+#phone_acc_greycode_2bit = grey_code_extraction_2bit(x_acc, y_acc)
+
+#acc_match = 0
+#for i in range(0, len(phone_acc_greycode_2bit)):
+    #print(watch_acc_greycode_2bit[i], phone_acc_greycode_2bit[i])
+#    if watch_acc_greycode_2bit[i] == phone_acc_greycode_2bit[i]:
+#        acc_match += 1
+
+#acc_match = acc_match / len(phone_acc_greycode_2bit)
+
+#if acc_match >= threshold:
+#    print("Acc - Success: " + str(acc_match))
+#else:
+#    print("Acc - Failure: " + str(acc_match))
