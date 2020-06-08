@@ -181,16 +181,14 @@ for file_phone in files_phone:
             
             curr_match_result = matching_codes_count / n
             
-            if curr_match_result >= threshold:
+            if curr_match_result > match_result:
                 match_result = curr_match_result
+            
+            if curr_match_result >= threshold:
                 break
 
             if curr_match_result < epsilon:
-                match_result = curr_match_result
                 break
-            
-            if curr_match_result > match_result:
-                match_result = curr_match_result
             
             walker += 1
 
