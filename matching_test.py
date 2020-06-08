@@ -59,12 +59,12 @@ def grey_code_extraction_3bit(a, b):
 
 # jump in terms of datapoint used for extracting the grey codedata_watch['x_acc_fin'][firstpeak_index:len(x_dy)]
 jump = 2
-threshold = 0.72
+threshold = 0.7
 epsilon = 0.4
-window_range = 0.2
+window_range = 0.15
 zeroes = [0.0, 0.0]
 calib_acc = {'min': -0.2, 'max': 0.2}
-calib_vel = 0.03
+calib_vel = 0.01
 
 
 files_phone = glob.glob('Test_Data/sec_protocol_tests/floating/Drawing_Data/*_smartphone_sample.csv')
@@ -181,17 +181,15 @@ for file_phone in files_phone:
             
             curr_match_result = matching_codes_count / n
             
-            if curr_match_result >= threshold:
-                match_result = curr_match_result
-                break
-
-            if curr_match_result < epsilon:
-                match_result = curr_match_result
-                break
-            
             if curr_match_result > match_result:
                 match_result = curr_match_result
             
+            if curr_match_result >= threshold:
+                break
+
+            if curr_match_result < epsilon:
+                break
+
             walker += 1
 
         if file_phone_identifier == file_watch_identifier:
