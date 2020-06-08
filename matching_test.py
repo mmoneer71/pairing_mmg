@@ -60,12 +60,15 @@ def grey_code_extraction_3bit(a, b):
 # jump in terms of datapoint used for extracting the grey codedata_watch['x_acc_fin'][firstpeak_index:len(x_dy)]
 jump = 2
 threshold = 0.7
-epsilon = 0.4
-window_range = 0.15
+epsilon = 0.35
+window_range = 0.2
 zeroes = [0.0, 0.0]
 calib_acc = {'min': -0.2, 'max': 0.2}
 calib_vel = 0.02
-
+results = {'matching_success': [], 
+            'non_matching_success': [], 
+            'false_positives': [], 
+            'false_negatives': []}
 
 files_phone = glob.glob('Test_Data/sec_protocol_tests/floating/Drawing_Data/*_smartphone_sample.csv')
 files_watch = glob.glob('Test_Data/sec_protocol_tests/floating/Accelerometer_Data/*_watch_sample.csv')
@@ -194,18 +197,19 @@ for file_phone in files_phone:
 
         if file_phone_identifier == file_watch_identifier:
             if match_result >= threshold:
-                if file_phone_identifier == '6':
-                    plt.plot(range(0, len(x_vel_filtered)), x_vel_filtered)
-                    plt.show()
                 success += 1
+                results['matching_success'].append(match_result)
             else:
                 print(file_phone_identifier, file_watch_identifier, str(match_result))
+                results['false_negatives'].append(match_result)
                 false_negatives += 1
         else:
             if match_result < threshold:
+                results['non_matching_success'].append(match_result)
                 success += 1
             else:
                 print(file_phone_identifier, file_watch_identifier, str(match_result))
+                results['false_positives'].append(match_result)
                 false_positives += 1
 
         
@@ -215,4 +219,12 @@ print('Total tests:', success + false_positives + false_negatives)
 print('Success:', success)
 print('False positives:', false_positives)
 print('False negatives:', false_negatives)
+print('-------------------------------')
+print('Matching success:', min(results['matching_success']), max(results['matching_success']))
+print('Non-matching success:', min(results['non_matching_success']), max(results['non_matching_success']))
+
+if results['false_positives']:
+    print('False positives:', min(results['false_positives']), max(results['false_positives']))
+if results['false_negatives']:
+    print('False negatives:', min(results['false_negatives']), max(results['false_negatives']))
 print('-------------------------------')

@@ -29,7 +29,7 @@ class ConnManager {
     private final static byte[] INPUT_COLLECTED_MSG = "done".getBytes();
     private final static int MAX_BUFFER_SIZE = 900;
     private final static int DELTA_T1 = 400;
-    private final static int DELTA_T2 = 900;
+    private final static int DELTA_T2 = 500;
 
     private BluetoothAdapter bluetoothAdapter;
     private Handler handler; // handler that gets info from Bluetooth service
@@ -222,7 +222,6 @@ class ConnManager {
             }
             Log.i(TAG, "3rd phase finished after: " + (System.currentTimeMillis() - startTime));
 
-            while (System.currentTimeMillis() - startTime < DELTA_T1 + DELTA_T2);
 
             // Commitment Opening
             byte[] myCommitmentOpening = cryptUtils.openCommitment();

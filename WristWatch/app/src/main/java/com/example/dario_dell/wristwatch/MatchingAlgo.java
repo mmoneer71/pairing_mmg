@@ -10,12 +10,12 @@ class MatchingAlgo {
     private static final String TAG = "MatchingAlgo";
 
     private static final int JUMP = 2;
-    private static final float ACCEPTANCE_THRESHOLD = 0.7f;
-    private static final float EPSILON = 0.4f;
+    private static final float ACCEPTANCE_THRESHOLD = 0.6f;
+    private static final float EPSILON = 0.35f;
     private static final float ZERO = 0.0f;
     private static final float VEL_NOISE = 0.02f;
     private static final float ACC_NOISE = 0.2f;
-    private static final float WINDOW_RANGE = 0.15f;
+    private static final float WINDOW_RANGE = 0.2f;
 
 
     private static boolean success = true;
@@ -141,6 +141,42 @@ class MatchingAlgo {
         return grayCodeBuilder.toString();
     }
 
+    private static String gen3bitGrayCode(List<Float> xInput, List<Float> yInput) {
+        StringBuilder grayCodeBuilder = new StringBuilder();
+        int n = xInput.size(), index = 0;
+        while (index + JUMP < n) {
+            if (xInput.get(index + JUMP) - xInput.get(index) >= 0 && yInput.get(index + JUMP) - yInput.get(index) >= 0) {
+                if (Math.abs(yInput.get(index + JUMP) - yInput.get(index)) <= Math.abs(xInput.get(index + JUMP) - xInput.get(index))) {
+                    grayCodeBuilder.append("000");
+                } else {
+                    grayCodeBuilder.append("001");
+                }
+            } else if (xInput.get(index + JUMP) - xInput.get(index) < 0 && yInput.get(index + JUMP) - yInput.get(index) >= 0) {
+                if (Math.abs(yInput.get(index + JUMP) - yInput.get(index)) > Math.abs(xInput.get(index + JUMP) - xInput.get(index))) {
+                    grayCodeBuilder.append("011");
+                } else {
+                    grayCodeBuilder.append("010");
+                }
+            } else if (xInput.get(index + JUMP) - xInput.get(index) < 0 && yInput.get(index + JUMP) - yInput.get(index) < 0) {
+                if (Math.abs(yInput.get(index + JUMP) - yInput.get(index)) <= Math.abs(xInput.get(index + JUMP) - xInput.get(index))) {
+                    grayCodeBuilder.append("110");
+                } else {
+                    grayCodeBuilder.append("111");
+                }
+            } else {
+                if (Math.abs(yInput.get(index + JUMP) - yInput.get(index)) > Math.abs(xInput.get(index + JUMP) - xInput.get(index))) {
+                    grayCodeBuilder.append("101");
+                } else {
+                    grayCodeBuilder.append("100");
+                }
+            }
+
+            ++index;
+
+        }
+        return grayCodeBuilder.toString();
+    }
+
     private static float compareEncodedStrings(String encodedBitsPhone, String encodedBitsWatch) {
         int phoneBitsSize = encodedBitsPhone.length(), watchBitsSize = encodedBitsWatch.length();
         float matchResult = 0.0f;
@@ -201,8 +237,8 @@ class MatchingAlgo {
         List<Float> xVelWatch = MathUtils.cumtrapz(xAcc);
         List<Float> yVelWatch = MathUtils.cumtrapz(yAcc);
 
-        String watchGrayCode = gen2bitGrayCode(xVelWatch, yVelWatch);
-        String phoneGrayCode = gen2bitGrayCode(xVel, yVel);
+        String watchGrayCode = gen3bitGrayCode(xVelWatch, yVelWatch);
+        String phoneGrayCode = gen3bitGrayCode(xVel, yVel);
 
         float matchRatio = compareEncodedStrings(phoneGrayCode, watchGrayCode);
         Log.i(TAG, "Match ratio is: " + matchRatio);
