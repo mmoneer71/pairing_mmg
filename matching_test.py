@@ -64,7 +64,7 @@ epsilon = 0.4
 window_range = 0.15
 zeroes = [0.0, 0.0]
 calib_acc = {'min': -0.2, 'max': 0.2}
-calib_vel = 0.01
+calib_vel = 0.02
 
 
 files_phone = glob.glob('Test_Data/sec_protocol_tests/floating/Drawing_Data/*_smartphone_sample.csv')
@@ -194,6 +194,9 @@ for file_phone in files_phone:
 
         if file_phone_identifier == file_watch_identifier:
             if match_result >= threshold:
+                if file_phone_identifier == '6':
+                    plt.plot(range(0, len(x_vel_filtered)), x_vel_filtered)
+                    plt.show()
                 success += 1
             else:
                 print(file_phone_identifier, file_watch_identifier, str(match_result))

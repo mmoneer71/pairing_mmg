@@ -13,7 +13,7 @@ class MatchingAlgo {
     private static final float ACCEPTANCE_THRESHOLD = 0.7f;
     private static final float EPSILON = 0.4f;
     private static final float ZERO = 0.0f;
-    private static final float VEL_NOISE = 0.01f;
+    private static final float VEL_NOISE = 0.02f;
     private static final float ACC_NOISE = 0.2f;
     private static final float WINDOW_RANGE = 0.15f;
 
