@@ -11,7 +11,6 @@ class MatchingAlgo {
 
     private static final int JUMP = 2;
     private static final float ACCEPTANCE_THRESHOLD = 0.6f;
-    private static final float EPSILON = 0.35f;
     private static final float ZERO = 0.0f;
     private static final float VEL_NOISE = 0.02f;
     private static final float ACC_NOISE = 0.2f;
@@ -204,7 +203,7 @@ class MatchingAlgo {
             float currMatchResult = (float) matchingCodesCount / (float) n;
             Log.i(TAG, "Current match result: " + currMatchResult);
 
-            if (currMatchResult >= ACCEPTANCE_THRESHOLD || currMatchResult < EPSILON)
+            if (currMatchResult >= ACCEPTANCE_THRESHOLD)
                 return currMatchResult;
 
             if (currMatchResult > matchResult) {

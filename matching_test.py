@@ -1,35 +1,11 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
-from scipy.fftpack import fftfreq, fft, ifft
-import scipy.signal as sig
 from scipy.integrate import cumtrapz
 import glob
 
 
-def grey_code_extraction_2bit(a, b):
-    if (a is None or len(a) == 0 or b is None or len(b) == 0):
-        ValueError(" grey_code_extraction:  invalid parameters ")
-    i = 0
-    bit_str = ''
-    while(i + jump < len(a) or i + jump < len(b)):        
-        if (a[i + jump] - a[i] >= 0):
-            bit_str += '0'
-            if (b[i + jump]- b[i] >= 0):
-                bit_str += '0'
-            else:
-                bit_str += '1'
-        else:
-            bit_str += '1'
-            if (b[i + jump] - b[i] >= 0):
-                bit_str += '1'
-            else:
-                bit_str += '0'
-        i += 1
-    return bit_str
-
 def grey_code_extraction_3bit(a, b):
-    if (a is None or len(a)==0 or b is None or len(b)==0):
+    if (a is None or len(a) == 0 or b is None or len(b) == 0):
         ValueError(" grey_code_extraction:  invalid parameters ")
     i = 0
     bits_str = ''
@@ -57,10 +33,9 @@ def grey_code_extraction_3bit(a, b):
         i += 1
     return bits_str
 
-# jump in terms of datapoint used for extracting the gray code
-
+# jump in terms of datapoint used for extracting the grey code
+jump = 2
 threshold = 0.7
-epsilon = 0.35
 window_range = 0.2
 zeroes = [0.0, 0.0]
 calib_acc = {'min': -0.2, 'max': 0.2}
@@ -188,9 +163,6 @@ for file_phone in files_phone:
                 match_result = curr_match_result
             
             if curr_match_result >= threshold:
-                break
-
-            if curr_match_result < epsilon:
                 break
 
             walker += 1

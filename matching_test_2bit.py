@@ -1,8 +1,5 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
-from scipy.fftpack import fftfreq, fft, ifft
-import scipy.signal as sig
 from scipy.integrate import cumtrapz
 import glob
 
@@ -28,39 +25,9 @@ def grey_code_extraction_2bit(a, b):
         i += 1
     return bit_str
 
-def grey_code_extraction_3bit(a, b):
-    if (a is None or len(a)==0 or b is None or len(b)==0):
-        ValueError(" grey_code_extraction:  invalid parameters ")
-    i = 0
-    bits_str = ''
-    while(i + jump < len(a) or i + jump < len(b)):        
-        if (a[i + jump] - a[i] >= 0) and (b[i + jump] - b[i] >= 0):
-            if abs(b[i + jump] - b[i]) <= abs(a[i + jump] - a[i]):
-                bits_str += '000'
-            else:
-                bits_str += '001'
-        elif (a[i + jump] - a[i] < 0) and (b[i + jump] - b[i] >= 0):
-            if abs(b[i + jump] - b[i]) > abs(a[i + jump] - a[i]):
-                bits_str += '011'
-            else:
-                bits_str += '010'
-        elif (a[i + jump] - a[i] < 0) and (b[i + jump] - b[i] < 0):
-            if abs(b[i + jump] - b[i]) <= abs(a[i + jump] - a[i]):
-                bits_str += '110'
-            else:
-                bits_str += '111'
-        else:
-            if abs(b[i + jump] - b[i]) > abs(a[i + jump] - a[i]):
-                bits_str += '101'
-            else:
-                bits_str += '100'
-        i += 1
-    return bits_str
-
 # jump in terms of datapoint used for extracting the gray code
 jump = 2
 threshold = 0.7
-epsilon = 0.35
 window_range = 0.2
 zeroes = [0.0, 0.0]
 calib_acc = {'min': -0.2, 'max': 0.2}
@@ -189,9 +156,6 @@ for file_phone in files_phone:
                 match_result = curr_match_result
             
             if curr_match_result >= threshold:
-                break
-
-            if curr_match_result < epsilon:
                 break
             
             walker += 1
