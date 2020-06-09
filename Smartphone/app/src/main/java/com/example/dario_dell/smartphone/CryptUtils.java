@@ -5,11 +5,17 @@ import android.util.Log;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.security.InvalidKeyException;
+import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -17,103 +23,80 @@ import java.util.Iterator;
 import java.util.List;
 
 import javax.crypto.Cipher;
+import javax.crypto.KeyAgreement;
 import javax.crypto.spec.DHParameterSpec;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-public class CryptUtils {
+class CryptUtils {
 
 
     private final static String TAG = "CryptUtils";
-    // Key size
-    static final int KEY_SIZE = 1024;
+    // ECDH Key size in bits
+    private static final int EC_KEY_SIZE = 256;
+    // Nonce size in bits
+    private static final int NONCE_SIZE = 1024;
     // Hash function output size
     static final int HASH_SIZE = 512;
     // Unique ID byte size
-    static final int ID_SIZE = 288;
-    // Generator: Has to be primitive root
-    private BigInteger g;
-    // Prime value
-    private BigInteger p;
-    // Public key component
-    private BigInteger pub;
-    // Private key component
-    private BigInteger priv;
+    private static final int ID_SIZE = 288;
+    // EC private key component
+    private PrivateKey ecPriv;
     // Current session Key
     private SecretKeySpec sessionKey;
-    // Current session nonce
-    private BigInteger nonce;
     // Current commitment opening
     private byte[] commitmentOpening;
     // Latest decrypted commitment received from other device
     private byte[] decryptedCommitment;
 
-    // Parameters extraction based on:
-    // https://stackoverflow.com/questions/19323178/how-to-do-diffie-hellman-key-generation-and-retrieve-raw-key-bytes-in-java
-    void initDHParams() {
+
+    byte[] genECDHKeyPair() {
         try {
             // Generate a DH key pair
-            KeyPairGenerator gen = KeyPairGenerator.getInstance("DH");
-            gen.initialize(KEY_SIZE);
-            KeyPair keyPair = gen.genKeyPair();
-
-            // Separate the private and the public key from the key pair
-            priv = ((javax.crypto.interfaces.DHPrivateKey) keyPair.getPrivate()).getX();
-            pub = ((javax.crypto.interfaces.DHPublicKey) keyPair.getPublic()).getY();
-
-            // Extract the safe prime and the generator number from the key pair
-            DHParameterSpec params = ((javax.crypto.interfaces.DHPublicKey) keyPair.getPublic()).getParams();
-            p = params.getP();
-            g = params.getG();
+            KeyPairGenerator gen = KeyPairGenerator.getInstance("EC");
+            gen.initialize(EC_KEY_SIZE);
+            KeyPair keyPair = gen.generateKeyPair();
+            this.ecPriv = keyPair.getPrivate();
+            return keyPair.getPublic().getEncoded();
         } catch (NoSuchAlgorithmException e) {
-            Log.e(TAG, "Error occurred when creating the Diffie-Hellman params", e);
+            Log.e(TAG, "Error occurred when creating the Elliptic-curve params", e);
+            return null;
         }
 
     }
 
-    void setDHParams() {
-        p = new BigInteger("158226922697030617948797227800498624915189325504023952753861279447483239021860246817118586173001979901983796625583670102839781534905294538416934403704582647288855845359398886205261258488868149392541793104557804708023361921748188126306804286723526796069672484804981694321100425357802703970505567917675490154159");
-        g = new BigInteger("88173088025497969607285612227517451555521798225119643685974814908304000890896133241125234093687057175629737474938680821119549216182920507795942634570963329026513429453884778473255437919969740174644539207004023810453975179883613841204932790018405615190065694910358431372613294863132989048355311612311291989235");
-        genNonce();
-    }
-
-    BigInteger genKeyPair() {
+    private byte[] genNonce() {
+        BigInteger nonce;
         do {
-            this.priv = new BigInteger(KEY_SIZE, (new SecureRandom()));
-
-            // Compute the public key component y
-            this.pub = this.g.modPow(priv, this.p);
-        } while (this.pub.toByteArray().length != KEY_SIZE / 8 || this.priv.toByteArray().length != KEY_SIZE / 8);
-
-        return this.pub;
+            nonce = new BigInteger(NONCE_SIZE, (new SecureRandom()));
+        } while (nonce.toByteArray().length != NONCE_SIZE / 8);
+        return nonce.toByteArray();
     }
 
-    private void genNonce() {
-        do {
-            nonce = new BigInteger(KEY_SIZE, (new SecureRandom()));
-        } while (nonce.toByteArray().length != KEY_SIZE / 8);
 
-    }
-
-    void computeSessionKey(BigInteger pubComponent) {
+    void computeECDHSessionKey(byte[] pubComponent) {
 
         if (this.sessionKey != null) {
             return;
         }
 
         try {
-            // Compute the key: dhKey = (dh_pubComponent ^ dh_privKey) mod dh_P
-            BigInteger dhKey = pubComponent.modPow(this.priv, this.p);
+            KeyFactory kf = KeyFactory.getInstance("EC");
+            X509EncodedKeySpec pkSpec = new X509EncodedKeySpec(pubComponent);
+            PublicKey otherPublicKey = kf.generatePublic(pkSpec);
+
+            KeyAgreement ka = KeyAgreement.getInstance("ECDH");
+            ka.init(this.ecPriv);
+            ka.doPhase(otherPublicKey, true);
 
             // Compress the key to 256 bits by deriving it with a hash function
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] dhKeyComp = digest.digest(dhKey.toByteArray());
+            byte[] dhKeyComp = digest.digest(ka.generateSecret());
 
             // Return an AES-256 key
             sessionKey = new SecretKeySpec(dhKeyComp, "AES");
 
-
-        } catch (NoSuchAlgorithmException e) {
+        } catch (NoSuchAlgorithmException | InvalidKeyException | InvalidKeySpecException e) {
             Log.e(TAG, "Error occurred when generating the session key", e);
         }
 
@@ -136,7 +119,7 @@ public class CryptUtils {
 
 
         byte[] idBytes = id.getBytes();
-        byte[] nonceBytes = nonce.toByteArray();
+        byte[] nonceBytes = genNonce();
         byte[] sessionKeyBytes = sessionKey.getEncoded();
         byte[] noisyInputXBytes = floatListToByteArray(noisyInputX);
         byte[] noisyInputYBytes = floatListToByteArray(noisyInputY);
@@ -168,7 +151,7 @@ public class CryptUtils {
 
     void getDecryptedNoisyInput(List<Float> noisyInputX, List<Float> noisyInputY) {
 
-        int noisyInputSize = (decryptedCommitment.length - ID_SIZE / 8 - KEY_SIZE / 8) / 2;
+        int noisyInputSize = (decryptedCommitment.length - ID_SIZE / 8 - NONCE_SIZE / 8) / 2;
 
         byte[] noisyInputXBytes = Arrays.copyOfRange(this.decryptedCommitment, ID_SIZE / 8,
                 ID_SIZE / 8 + noisyInputSize);

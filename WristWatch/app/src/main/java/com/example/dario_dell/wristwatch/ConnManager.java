@@ -12,7 +12,6 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -180,24 +179,22 @@ class ConnManager {
         public void run() {
 
 
-            // Initiate DH exchange
-            cryptUtils.setDHParams();
+            // Generate own key pair
+            byte[] pubKey = cryptUtils.genECDHKeyPair();
 
-            BigInteger gX = cryptUtils.genKeyPair();
 
-            int sizeInBytes = CryptUtils.KEY_SIZE / 8;
+            // Read other device's public key
+            int sizeInBytes = pubKey.length;
             mmBuffer = new byte[sizeInBytes];
-
             read();
-            BigInteger gY = new BigInteger(mmBuffer);
+            byte[] otherPubKey = mmBuffer.clone();
 
-
-            mmBuffer = gX.toByteArray();
-            write(mmBuffer);
+            // Send own public key
+            write(pubKey);
 
 
             // Generate Session Key
-            cryptUtils.computeSessionKey(gY);
+            cryptUtils.computeECDHSessionKey(otherPubKey);
             keyExchangeDone = true;
 
             // Block waiting till noisy input is collected on phone

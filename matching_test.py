@@ -57,8 +57,8 @@ def grey_code_extraction_3bit(a, b):
         i += 1
     return bits_str
 
-# jump in terms of datapoint used for extracting the grey codedata_watch['x_acc_fin'][firstpeak_index:len(x_dy)]
-jump = 2
+# jump in terms of datapoint used for extracting the gray code
+
 threshold = 0.7
 epsilon = 0.35
 window_range = 0.2
