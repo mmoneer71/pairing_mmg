@@ -48,9 +48,6 @@ false_positives = 0
 false_negatives = 0
 
 
-#vel_file_path = 'Test_Data/sec_protocol_tests/Drawing_Data/2020-05-08_1_smartphone_sample.csv'
-#acc_file_path = 'Test_Data/sec_protocol_tests/Accelerometer_Data/2020-05-08_1_watch_sample.csv'
-
 for file_phone in files_phone:
     # DataFrame collection from files
     data_phone = pd.read_csv(file_phone, engine='python')
@@ -165,7 +162,7 @@ for file_phone in files_phone:
                 success += 1
                 results['matching_success'].append(match_result)
             else:
-                print(file_phone_identifier, file_watch_identifier, str(match_result))
+                print(file_phone_identifier, file_watch_identifier, match_result)
                 false_negatives += 1
                 results['false_negatives'].append(match_result)
         else:
@@ -173,7 +170,7 @@ for file_phone in files_phone:
                 results['non_matching_success'].append(match_result)
                 success += 1
             else:
-                print(file_phone_identifier, file_watch_identifier, str(match_result))
+                print(file_phone_identifier, file_watch_identifier, match_result)
                 results['false_positives'].append(match_result)
                 false_positives += 1
 

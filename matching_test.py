@@ -53,10 +53,8 @@ files_watch.sort()
 success = 0
 false_positives = 0
 false_negatives = 0
+window_mismatch = 0
 
-
-#vel_file_path = 'Test_Data/sec_protocol_tests/Drawing_Data/2020-05-08_1_smartphone_sample.csv'
-#acc_file_path = 'Test_Data/sec_protocol_tests/Accelerometer_Data/2020-05-08_1_watch_sample.csv'
 
 for file_phone in files_phone:
     # DataFrame collection from files
@@ -142,6 +140,7 @@ for file_phone in files_phone:
         if window > n * window_range:
             if file_phone_identifier != file_watch_identifier:
                 success += 1
+                window_mismatch += 1
             else:
                 print(file_phone_identifier, file_watch_identifier, 'Number of samples mismatch, aborting.')
                 false_negatives += 1
@@ -172,7 +171,7 @@ for file_phone in files_phone:
                 success += 1
                 results['matching_success'].append(match_result)
             else:
-                print(file_phone_identifier, file_watch_identifier, str(match_result))
+                print(file_phone_identifier, file_watch_identifier, match_result)
                 results['false_negatives'].append(match_result)
                 false_negatives += 1
         else:
@@ -180,7 +179,7 @@ for file_phone in files_phone:
                 results['non_matching_success'].append(match_result)
                 success += 1
             else:
-                print(file_phone_identifier, file_watch_identifier, str(match_result))
+                print(file_phone_identifier, file_watch_identifier, match_result)
                 results['false_positives'].append(match_result)
                 false_positives += 1
 
@@ -191,6 +190,7 @@ print('Total tests:', success + false_positives + false_negatives)
 print('Success:', success)
 print('False positives:', false_positives)
 print('False negatives:', false_negatives)
+print('Window mismatch:', window_mismatch)
 print('-------------------------------')
 print('Matching success:', min(results['matching_success']), max(results['matching_success']))
 print('Non-matching success:', min(results['non_matching_success']), max(results['non_matching_success']))
