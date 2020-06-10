@@ -47,8 +47,8 @@ results = {'matching_success': [],
             'window_mismatch': [],
             'false_window_mismatch': []}
 
-files_phone = glob.glob('Tests/final_tests/Drawing_Data/*_smartphone_sample.csv')
-files_watch = glob.glob('Tests/final_tests/Accelerometer_Data/*_watch_sample.csv')
+files_phone = glob.glob('Tests/unlock_pattern/final_tests/Drawing_Data/*_smartphone_sample.csv')
+files_watch = glob.glob('Tests/unlock_pattern/final_tests/Accelerometer_Data/*_watch_sample.csv')
 
 files_phone.sort()
 files_watch.sort()
