@@ -40,8 +40,8 @@ results = {'matching_success': [],
             'false_window_mismatch': []}
 
 
-files_phone = glob.glob('Test_Data/sec_protocol_tests/floating/Drawing_Data/*_smartphone_sample.csv')
-files_watch = glob.glob('Test_Data/sec_protocol_tests/floating/Accelerometer_Data/*_watch_sample.csv')
+files_phone = glob.glob('Tests/initial_floating_tests/Drawing_Data/*_smartphone_sample.csv')
+files_watch = glob.glob('Tests/initial_floating_tests/Accelerometer_Data/*_watch_sample.csv')
 
 files_phone.sort()
 files_watch.sort()

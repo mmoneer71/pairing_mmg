@@ -27,8 +27,7 @@ class ConnManager {
     private final static byte[] ACK_MSG = "ack".getBytes();
     private final static byte[] INPUT_COLLECTED_MSG = "done".getBytes();
     private final static int MAX_BUFFER_SIZE = 900;
-    private final static int DELTA_T1 = 400;
-    private final static int DELTA_T2 = 500;
+    private final static int DELTA_T = 500;
 
     private BluetoothAdapter bluetoothAdapter;
     private Handler handler; // handler that gets info from Bluetooth service
@@ -217,7 +216,7 @@ class ConnManager {
             read();
             String otherCommitment = Base64.getEncoder().encodeToString(mmBuffer);
 
-            if (System.currentTimeMillis() - startTime > DELTA_T1) {
+            if (System.currentTimeMillis() - startTime > DELTA_T) {
                 Log.e(TAG, "Time violation on delta1");
                 pairingStatus = false;
                 pairingComplete = true;

@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.Handler;
 import android.support.v4.app.ActivityCompat;
@@ -42,7 +43,7 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
     private float[] acceleration = new float[3];
     // https://stackoverflow.com/questions/15158769/android-acceleration-direction
     private float[] linearAcceleration = new float[3];
-    private boolean isStable = false;
+    private boolean isStable = false, countDownStarted = false;
 
 
     private final int MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL = 1;
@@ -146,6 +147,9 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         if (!isStable) {
             checkStability();
         }
+        else if (!countDownStarted) {
+            startCountDown();
+        }
         logData();
 
         if (connManager.isNoisyInputCollected()) {
@@ -173,9 +177,24 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
             Log.d("Calibration", "Still calibrating...");
             return;
         }
-        logData = true;
-        instructionsTxtView.setText(R.string.drawing);
         isStable = true;
+
+    }
+
+    private void startCountDown() {
+        new CountDownTimer(3000, 1000) {
+
+            public void onTick(long millisUntilFinished) {
+                long timeLeft = (millisUntilFinished + 100) / 1000;
+                instructionsTxtView.setText(String.format(getString(R.string.wait), timeLeft));
+            }
+
+            public void onFinish() {
+                instructionsTxtView.setText(R.string.drawing);
+                logData = true;
+            }
+        }.start();
+        countDownStarted = true;
     }
 
     private void initPairing() {
