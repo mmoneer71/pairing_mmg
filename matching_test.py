@@ -38,22 +38,20 @@ jump = 2
 threshold = 0.7
 window_range = 0.2
 zeroes = [0.0, 0.0]
-calib_acc = {'min': -0.2, 'max': 0.2}
+calib_acc = 0.2
 calib_vel = 0.02
 results = {'matching_success': [], 
             'non_matching_success': [], 
             'false_positives': [], 
-            'false_negatives': []}
+            'false_negatives': [],
+            'window_mismatch': [],
+            'false_window_mismatch': []}
 
-files_phone = glob.glob('Test_Data/sec_protocol_tests/floating/Drawing_Data/*_smartphone_sample.csv')
-files_watch = glob.glob('Test_Data/sec_protocol_tests/floating/Accelerometer_Data/*_watch_sample.csv')
+files_phone = glob.glob('Test_Data/sec_protocol_tests/on_the_table/Drawing_Data/*_smartphone_sample.csv')
+files_watch = glob.glob('Test_Data/sec_protocol_tests/on_the_table/Accelerometer_Data/*_watch_sample.csv')
 
 files_phone.sort()
 files_watch.sort()
-success = 0
-false_positives = 0
-false_negatives = 0
-window_mismatch = 0
 
 
 for file_phone in files_phone:
@@ -73,9 +71,9 @@ for file_phone in files_phone:
 
         #Acceleration Noise filtering
         for i in range(0, len(x_acc_filtered)):
-            if x_acc_filtered[i] <= calib_acc['max'] and x_acc_filtered[i] >= calib_acc['min']:
+            if x_acc_filtered[i] <= calib_acc and x_acc_filtered[i] >= -calib_acc:
                 x_acc_filtered[i] = 0
-            if y_acc_filtered[i] <= calib_acc['max'] and y_acc_filtered[i] >= calib_acc['min']:
+            if y_acc_filtered[i] <= calib_acc and y_acc_filtered[i] >= -calib_acc:
                 y_acc_filtered[i] = 0
 
         #Velocity Noise filtering
@@ -139,11 +137,10 @@ for file_phone in files_phone:
 
         if window > n * window_range:
             if file_phone_identifier != file_watch_identifier:
-                success += 1
-                window_mismatch += 1
+                results['window_mismatch'].append(0.0)
             else:
                 print(file_phone_identifier, file_watch_identifier, 'Number of samples mismatch, aborting.')
-                false_negatives += 1
+                results['false_window_mismatch'].append(0.0)
             continue
 
         while walker <= window:
@@ -168,35 +165,24 @@ for file_phone in files_phone:
 
         if file_phone_identifier == file_watch_identifier:
             if match_result >= threshold:
-                success += 1
                 results['matching_success'].append(match_result)
             else:
                 print(file_phone_identifier, file_watch_identifier, match_result)
                 results['false_negatives'].append(match_result)
-                false_negatives += 1
         else:
             if match_result < threshold:
                 results['non_matching_success'].append(match_result)
-                success += 1
             else:
                 print(file_phone_identifier, file_watch_identifier, match_result)
                 results['false_positives'].append(match_result)
-                false_positives += 1
 
         
 print('-------------------------------')
 print('Result using 3-bit encoding:')
-print('Total tests:', success + false_positives + false_negatives)
-print('Success:', success)
-print('False positives:', false_positives)
-print('False negatives:', false_negatives)
-print('Window mismatch:', window_mismatch)
+print('Total tests:', len(files_phone) * len(files_watch))
 print('-------------------------------')
-print('Matching success:', min(results['matching_success']), max(results['matching_success']))
-print('Non-matching success:', min(results['non_matching_success']), max(results['non_matching_success']))
-
-if results['false_positives']:
-    print('False positives:', min(results['false_positives']), max(results['false_positives']))
-if results['false_negatives']:
-    print('False negatives:', min(results['false_negatives']), max(results['false_negatives']))
+print('Key\t\t   Count  Min  Max')
+for key in results.keys():
+    if results[key]:
+        print(key, ':', len(results[key]), round(min(results[key]), 3), round(max(results[key]), 3))
 print('-------------------------------')
