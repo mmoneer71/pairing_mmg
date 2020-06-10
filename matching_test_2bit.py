@@ -28,7 +28,7 @@ def grey_code_extraction_2bit(a, b):
 # jump in terms of datapoint used for extracting the gray code
 jump = 2
 threshold = 0.7
-window_range = 0.2
+window_range = 0.15
 zeroes = [0.0, 0.0]
 calib_acc = 0.2
 calib_vel = 0.02
@@ -40,8 +40,8 @@ results = {'matching_success': [],
             'false_window_mismatch': []}
 
 
-files_phone = glob.glob('Tests/initial_floating_tests/Drawing_Data/*_smartphone_sample.csv')
-files_watch = glob.glob('Tests/initial_floating_tests/Accelerometer_Data/*_watch_sample.csv')
+files_phone = glob.glob('Tests/final_tests/Drawing_Data/*_smartphone_sample.csv')
+files_watch = glob.glob('Tests/final_tests/Accelerometer_Data/*_watch_sample.csv')
 
 files_phone.sort()
 files_watch.sort()

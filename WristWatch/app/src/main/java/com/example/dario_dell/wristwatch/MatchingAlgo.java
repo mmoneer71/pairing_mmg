@@ -10,11 +10,11 @@ class MatchingAlgo {
     private static final String TAG = "MatchingAlgo";
 
     private static final int JUMP = 2;
-    private static final float ACCEPTANCE_THRESHOLD = 0.6f;
+    private static final float ACCEPTANCE_THRESHOLD = 0.7f;
     private static final float ZERO = 0.0f;
     private static final float VEL_NOISE = 0.02f;
     private static final float ACC_NOISE = 0.2f;
-    private static final float WINDOW_RANGE = 0.2f;
+    private static final float WINDOW_RANGE = 0.15f;
 
 
     private static boolean success = true;

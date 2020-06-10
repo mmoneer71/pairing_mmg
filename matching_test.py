@@ -36,7 +36,7 @@ def grey_code_extraction_3bit(a, b):
 # jump in terms of datapoint used for extracting the grey code
 jump = 2
 threshold = 0.7
-window_range = 0.2
+window_range = 0.15
 zeroes = [0.0, 0.0]
 calib_acc = 0.2
 calib_vel = 0.02
@@ -47,8 +47,8 @@ results = {'matching_success': [],
             'window_mismatch': [],
             'false_window_mismatch': []}
 
-files_phone = glob.glob('Tests/initial_laying_tests/Drawing_Data/*_smartphone_sample.csv')
-files_watch = glob.glob('Tests/initial_laying_tests/Accelerometer_Data/*_watch_sample.csv')
+files_phone = glob.glob('Tests/final_tests/Drawing_Data/*_smartphone_sample.csv')
+files_watch = glob.glob('Tests/final_tests/Accelerometer_Data/*_watch_sample.csv')
 
 files_phone.sort()
 files_watch.sort()
@@ -158,8 +158,8 @@ for file_phone in files_phone:
             if curr_match_result > match_result:
                 match_result = curr_match_result
             
-            if curr_match_result >= threshold:
-                break
+            #if curr_match_result >= threshold:
+            #    break
 
             walker += 1
 
