@@ -205,7 +205,7 @@ plt.figure()
 
 plt.hist(windows['matching'], label = 'Matching samples', histtype='step', linewidth=2)
 
-plt.xlabel('ABsolute difference of signals\' length : Length of shorter signal')
+plt.xlabel('Absolute difference of signals\' length : Length of shorter signal')
 plt.ylabel('Number of samples')
 
 plt.legend(loc="upper left")
