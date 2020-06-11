@@ -47,6 +47,8 @@ results = {'matching_success': [],
             'window_mismatch': [],
             'false_window_mismatch': []}
 
+windows = {'matching': [],
+            'non_matching': []}
 files_phone = glob.glob('Tests/unlock_pattern/final_tests/Drawing_Data/*_smartphone_sample.csv')
 files_watch = glob.glob('Tests/unlock_pattern/final_tests/Accelerometer_Data/*_watch_sample.csv')
 
@@ -139,7 +141,7 @@ for file_phone in files_phone:
             if file_phone_identifier != file_watch_identifier:
                 results['window_mismatch'].append(0.0)
             else:
-                print(file_phone_identifier, file_watch_identifier, 'Number of samples mismatch, aborting.')
+                #print(file_phone_identifier, file_watch_identifier, 'Number of samples mismatch, aborting.')
                 results['false_window_mismatch'].append(0.0)
             continue
 
@@ -158,31 +160,54 @@ for file_phone in files_phone:
             if curr_match_result > match_result:
                 match_result = curr_match_result
             
-            #if curr_match_result >= threshold:
-            #    break
-
             walker += 1
 
         if file_phone_identifier == file_watch_identifier:
+            windows['matching'].append(round(window / n, 2))
             if match_result >= threshold:
                 results['matching_success'].append(match_result)
             else:
-                print(file_phone_identifier, file_watch_identifier, match_result)
+                #print(file_phone_identifier, file_watch_identifier, match_result)
                 results['false_negatives'].append(match_result)
         else:
+            windows['non_matching'].append(round(window / n, 2))
             if match_result < threshold:
                 results['non_matching_success'].append(match_result)
             else:
-                print(file_phone_identifier, file_watch_identifier, match_result)
+                #print(file_phone_identifier, file_watch_identifier, match_result)
                 results['false_positives'].append(match_result)
 
         
-print('-------------------------------')
+
 print('Result using 3-bit encoding:')
 print('Total tests:', len(files_phone) * len(files_watch))
 print('-------------------------------')
 print('Key\t\t   Count  Min  Max')
 for key in results.keys():
     if results[key]:
-        print(key, ':', len(results[key]), round(min(results[key]), 3), round(max(results[key]), 3))
+        print(key, ':', len(results[key]), min(results[key]), max(results[key]))
+
 print('-------------------------------')
+
+plt.hist(results['non_matching_success'] + results['false_positives'],
+                 label = 'Non-matching samples', histtype='step', linewidth=2)
+
+plt.hist(results['matching_success'] + results['false_negatives'],
+                 label = 'Matching samples', histtype='step', linewidth=2)
+
+
+plt.xlabel('Correlation ratio')
+plt.ylabel('Number of pairing attempts')
+
+plt.legend(loc="upper left")
+
+plt.figure()
+
+plt.hist(windows['matching'], label = 'Matching samples', histtype='step', linewidth=2)
+
+plt.xlabel('ABsolute difference of signals\' length : Length of shorter signal')
+plt.ylabel('Number of samples')
+
+plt.legend(loc="upper left")
+
+plt.show()

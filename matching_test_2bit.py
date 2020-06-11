@@ -132,7 +132,7 @@ for file_phone in files_phone:
             if file_phone_identifier != file_watch_identifier:
                 results['window_mismatch'].append(0.0)
             else:
-                print(file_phone_identifier, file_watch_identifier, 'Number of samples mismatch, aborting.')
+                #print(file_phone_identifier, file_watch_identifier, 'Number of samples mismatch, aborting.')
                 results['false_window_mismatch'].append(0.0)
             continue
 
@@ -150,27 +150,23 @@ for file_phone in files_phone:
             
             if curr_match_result > match_result:
                 match_result = curr_match_result
-            
-            if curr_match_result >= threshold:
-                break
-            
+                        
             walker += 1
 
         if file_phone_identifier == file_watch_identifier:
             if match_result >= threshold:
                 results['matching_success'].append(match_result)
             else:
-                print(file_phone_identifier, file_watch_identifier, match_result)
+                #print(file_phone_identifier, file_watch_identifier, match_result)
                 results['false_negatives'].append(match_result)
         else:
             if match_result < threshold:
                 results['non_matching_success'].append(match_result)
             else:
-                print(file_phone_identifier, file_watch_identifier, match_result)
+                #print(file_phone_identifier, file_watch_identifier, match_result)
                 results['false_positives'].append(match_result)
 
         
-print('-------------------------------')
 print('Result using 2-bit encoding:')
 print('Total tests:', len(files_phone) * len(files_watch))
 print('-------------------------------')
@@ -180,6 +176,20 @@ for key in results.keys():
         print(key, ':', len(results[key]), round(min(results[key]), 3), round(max(results[key]), 3))
 print('-------------------------------')
 
+
+plt.hist(results['non_matching_success'] + results['false_positives'],
+                 label = 'Non-matching samples', histtype='step', linewidth=2)
+
+plt.hist(results['matching_success'] + results['false_negatives'],
+                 label = 'Matching samples', histtype='step', linewidth=2)
+
+
+plt.xlabel('Correlation ratio')
+plt.ylabel('Number of pairing attempts')
+
+plt.legend(loc="upper left")
+
+plt.show()
 
 ###################################Acceleration######################################
 #x_acc = np.diff(x_vel_filtered)
