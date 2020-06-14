@@ -6,7 +6,7 @@ The thesis was prepared at Aalto University, School of Science, Finland in parti
 
 The thesis deals with a practicality study of secure Bluetooth pairing a smartwatch and a smartphone using multi-modal gestures, i.e., through drawing on a smartphone's screen and comparing it with the wrist movement from a smartwatch using a fusion of accelerometer, gyroscope and magnetometer data.
 
-This thesis work has been supervised by:
+This thesis work has been supervised by: <br />
 Prof. Mario Di Francesco (Aalto) <br />
 Prof. Stephan Sigg (Aalto) <br />
 Prof. Christian D. Jensen (DTU) <br />
