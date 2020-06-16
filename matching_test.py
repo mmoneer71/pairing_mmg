@@ -4,6 +4,27 @@ from scipy.integrate import cumtrapz
 import glob
 
 
+def grey_code_extraction_2bit(a, b):
+    if (a is None or len(a) == 0 or b is None or len(b) == 0):
+        ValueError(" grey_code_extraction:  invalid parameters ")
+    i = 0
+    bit_str = ''
+    while(i + jump < len(a) or i + jump < len(b)):        
+        if (a[i + jump] - a[i] >= 0):
+            bit_str += '0'
+            if (b[i + jump]- b[i] >= 0):
+                bit_str += '0'
+            else:
+                bit_str += '1'
+        else:
+            bit_str += '1'
+            if (b[i + jump] - b[i] >= 0):
+                bit_str += '1'
+            else:
+                bit_str += '0'
+        i += 1
+    return bit_str
+
 def grey_code_extraction_3bit(a, b):
     if (a is None or len(a) == 0 or b is None or len(b) == 0):
         ValueError(" grey_code_extraction:  invalid parameters ")
@@ -33,6 +54,7 @@ def grey_code_extraction_3bit(a, b):
         i += 1
     return bits_str
 
+enc_bits = 3
 # jump in terms of datapoint used for extracting the grey code
 jump = 2
 threshold = 0.7
@@ -128,8 +150,12 @@ for file_phone in files_phone:
         y_vel = cumtrapz(y_acc_filtered)
         y_vel = [0.0] + y_vel
 
-        watch_vel_greycode = grey_code_extraction_3bit(x_vel, y_vel)
-        phone_vel_greycode = grey_code_extraction_3bit(x_vel_filtered, y_vel_filtered)
+        if enc_bits == 2:
+            watch_vel_greycode = grey_code_extraction_2bit(x_vel, y_vel)
+            phone_vel_greycode = grey_code_extraction_2bit(x_vel_filtered, y_vel_filtered)
+        else:
+            watch_vel_greycode = grey_code_extraction_3bit(x_vel, y_vel)
+            phone_vel_greycode = grey_code_extraction_3bit(x_vel_filtered, y_vel_filtered)
 
         match_result = 0.0
         walker = 0
@@ -201,6 +227,8 @@ plt.ylabel('Number of pairing attempts')
 
 plt.legend(loc="upper left")
 
+plt.savefig('{}bit.pdf'.format(enc_bits)) 
+
 plt.figure()
 
 plt.hist(windows['matching'], label = 'Matching samples', histtype='step', linewidth=2)
@@ -210,4 +238,4 @@ plt.ylabel('Number of samples')
 
 plt.legend(loc="upper left")
 
-plt.show()
+plt.savefig('sliding_window.pdf') 

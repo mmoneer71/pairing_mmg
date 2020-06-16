@@ -181,4 +181,4 @@ plt.ylabel('Number of pairing attempts')
 
 plt.legend(loc="upper left")
 
-plt.show()
+plt.savefig('3bit_resampled.pdf') 

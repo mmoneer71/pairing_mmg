@@ -24,7 +24,6 @@ import java.util.List;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyAgreement;
-import javax.crypto.spec.DHParameterSpec;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -33,7 +32,7 @@ class CryptUtils {
 
     private final static String TAG = "CryptUtils";
     // ECDH Key size in bits
-    private static final int EC_KEY_SIZE = 256;
+    private static final int EC_KEY_SIZE = 521;
     // Nonce size in bits
     private static final int NONCE_SIZE = 1024;
     // Hash function output size
