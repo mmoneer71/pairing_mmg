@@ -77,6 +77,9 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
     List<Float> x_velocity, y_velocity;
     private boolean isInitialized = false;
     private boolean pairingDone = false;
+    private boolean drawingEnded = false, drawingStarted = false;
+    private float noiseThreshold = 0.02f;
+    private int sampleCount = 0;
 
 
     @Override
@@ -122,6 +125,9 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
         if (!isInitialized) {
             checkInitProgress();
         }
+
+        detectOnset();
+        detectEnding();
 
         if (!pairingDone) {
             checkPairingProgress();
@@ -202,15 +208,12 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
     }
 
     private void clear() {
-        velocityTracker.recycle();
-        velocityTracker = null;
         initProgressBar("Pairing in progress, please wait", true);
         generation = 0;
         log = "";
         logData = false;
         x_velocity.clear();
         y_velocity.clear();
-        resetView();
     }
 
     @Override
@@ -276,8 +279,9 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
                 velocityTracker.addMovement(event);
-                notifyNoisyInputCollected();
-                clear();
+                velocityTracker.recycle();
+                velocityTracker = null;
+                resetView();
                 break;
         }
         // Calling invalidate will cause the onDraw method to execute
@@ -288,6 +292,39 @@ public class MainActivity extends AppCompatActivity implements ViewWasTouchedLis
     protected static double calculateMagnitude(float x, float y){
         return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
     }
+
+    private void detectOnset() {
+        if (logData && !drawingStarted) {
+            if (filtered_velocity[0] < -noiseThreshold || filtered_velocity[0] > noiseThreshold
+                    || filtered_velocity[1] < -noiseThreshold || filtered_velocity[1] > noiseThreshold) {
+                ++sampleCount;
+            } else {
+                sampleCount = 0;
+            }
+
+            if (sampleCount == 10) {
+                drawingStarted = true;
+            }
+        }
+    }
+
+    private void detectEnding() {
+        if (drawingStarted && !drawingEnded) {
+            if (filtered_velocity[0] >= -noiseThreshold && filtered_velocity[0] <= noiseThreshold
+                    && filtered_velocity[1] >= -noiseThreshold && filtered_velocity[1] <= noiseThreshold) {
+                ++sampleCount;
+            } else {
+                sampleCount = 0;
+            }
+
+            if (sampleCount == 20) {
+                drawingEnded = true;
+                notifyNoisyInputCollected();
+                clear();
+            }
+        }
+    }
+
 
 
     private void updateView(float velocity_x, float velocity_y,

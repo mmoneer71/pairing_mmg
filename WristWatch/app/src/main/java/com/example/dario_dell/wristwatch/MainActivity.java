@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Message;
 import android.support.v4.app.ActivityCompat;
 import android.support.wearable.activity.WearableActivity;
 import android.util.Log;
@@ -50,10 +51,13 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
     private final int REQUEST_ENABLE_BT = 1;
     private long logTime = 0;
     private int generation = 0;
-    private boolean logData = false;
+    private boolean logData = false, drawingEnded = false, drawingStarted = false, pairingStarted = false;
+    private boolean pairingDone = false;
     private Handler handler;
     // Output log
     private String log;
+    private int sampleCount = 0;
+    private float noiseThreshold = 0.2f;
 
 
     private AccelerationSensor accelerationSensor;
@@ -64,6 +68,8 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
 
     private ConnManager connManager;
     List<Float> x_lin_acc, y_lin_acc;
+    private final Message noisyInputMsg = new Message();
+
 
 
     @Override
@@ -86,7 +92,7 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
 
         checkExternalWritePermission();
 
-        connManager = new ConnManager();
+        connManager = new ConnManager(noisyInputMsg);
         initBluetooth();
 
         x_lin_acc = new ArrayList<>();
@@ -150,12 +156,13 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         else if (!countDownStarted) {
             startCountDown();
         }
-        logData();
-
-        if (connManager.isNoisyInputCollected()) {
+        if (drawingEnded && !pairingStarted) {
             initPairing();
-            handler.removeCallbacks(this);
         }
+        logData();
+        detectOnset();
+        detectEnding();
+        checkPairingProgress();
     }
 
     private void checkExternalWritePermission() {
@@ -167,9 +174,6 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
 
     }
 
-    private boolean checkPairingProgress() {
-        return connManager.isPairingComplete();
-    }
 
     private void checkStability() {
         if (!linearAccelerationSensor.getFusionSystemStability() ||
@@ -179,6 +183,37 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
         }
         isStable = true;
 
+    }
+
+    private void detectOnset() {
+        if (logData && !drawingStarted) {
+            if (linearAcceleration[0] < -noiseThreshold || linearAcceleration[0] > noiseThreshold
+                    || linearAcceleration[1] < -noiseThreshold || linearAcceleration[1] > noiseThreshold) {
+                ++sampleCount;
+            } else {
+                sampleCount = 0;
+            }
+
+            if (sampleCount == 10) {
+                drawingStarted = true;
+            }
+        }
+    }
+
+    private void detectEnding() {
+        if (drawingStarted && !drawingEnded) {
+            if (linearAcceleration[0] >= -noiseThreshold && linearAcceleration[0] <= noiseThreshold
+                    && linearAcceleration[1] >= -noiseThreshold && linearAcceleration[1] <= noiseThreshold) {
+                ++sampleCount;
+            } else {
+                sampleCount = 0;
+            }
+
+            if (sampleCount == 20) {
+                drawingEnded = true;
+                instructionsTxtView.setText(R.string.pairing);
+            }
+        }
     }
 
     private void startCountDown() {
@@ -199,22 +234,30 @@ public class MainActivity extends WearableActivity implements AccelerationSensor
 
     private void initPairing() {
         connManager.setNoisyInput(x_lin_acc, y_lin_acc);
+
+        synchronized (noisyInputMsg) {
+            noisyInputMsg.notify();
+        }
+
         writeToFile();
         log = "";
         logData = false;
         x_lin_acc.clear();
         y_lin_acc.clear();
-        instructionsTxtView.setText(R.string.pairing);
+        pairingStarted = true;
+    }
 
-        while (!checkPairingProgress());
-
-
-        boolean pairingResult = connManager.getPairingResult();
-        if (pairingResult) {
-            instructionsTxtView.setText(R.string.success);
-        }
-        else {
-            instructionsTxtView.setText(R.string.failure);
+    private void checkPairingProgress() {
+        if (connManager.isPairingComplete()) {
+            boolean pairingResult = connManager.getPairingResult();
+            if (pairingResult) {
+                instructionsTxtView.setText(R.string.success);
+            }
+            else {
+                instructionsTxtView.setText(R.string.failure);
+            }
+            pairingDone = true;
+            handler.removeCallbacks(this);
         }
     }
 

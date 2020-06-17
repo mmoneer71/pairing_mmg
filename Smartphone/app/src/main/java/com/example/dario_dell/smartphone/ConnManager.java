@@ -195,13 +195,6 @@ class ConnManager {
 
             Log.i(TAG, "Noisy input collected successfully.");
 
-            // Notify wristwatch that input is collected
-            write(INPUT_COLLECTED_MSG);
-
-            // Wait for ack message to be received
-            mmBuffer = new byte[ACK_MSG.length];
-            read();
-
             // Set start timer
             long startTime = System.currentTimeMillis();
             // Generate commitment

@@ -97,8 +97,8 @@ class MatchingAlgo {
 
 
         if (signalType == SignalTypes.SIGNAL_VEL) {
-            xVel = xInput.subList(startIndex, xInput.size());
-            yVel = yInput.subList(startIndex, yInput.size());
+            xVel = xInput.subList(startIndex, endIndex + 1);
+            yVel = yInput.subList(startIndex, endIndex + 1);
         }
 
         if (signalType == SignalTypes.SIGNAL_ACC) {

@@ -39,7 +39,7 @@ class ConnManager {
     private boolean keyExchangeDone, noisyInputCollected, pairingComplete, pairingStatus;
     private List<Float> noisyInputX, noisyInputY, decryptedNoisyInputX, decryptedNoisyInputY;
     private String uniqueID;
-
+    private final Message noisyInputMsg;
 
     // Defines several constants used when transmitting messages between the
     // service and the UI.
@@ -51,7 +51,7 @@ class ConnManager {
         // ... (Add other message types here as needed.)
     }
 
-    ConnManager() {
+    ConnManager(Message noisyInputMsg) {
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         handler = new Handler();
         cryptUtils = new CryptUtils();
@@ -61,6 +61,7 @@ class ConnManager {
         uniqueID = UUID.randomUUID().toString();
         decryptedNoisyInputX = new ArrayList<>();
         decryptedNoisyInputY = new ArrayList<>();
+        this.noisyInputMsg = noisyInputMsg;
     }
     Intent checkIfEnabled() {
         if (!getBluetoothAdapter().isEnabled()) {
@@ -81,8 +82,6 @@ class ConnManager {
     boolean isKeyExchangeDone() {return keyExchangeDone; }
 
     boolean isPairingComplete() {return pairingComplete; }
-
-    boolean isNoisyInputCollected() {return noisyInputCollected; }
 
     boolean getPairingResult() {return pairingStatus; }
 
@@ -196,13 +195,17 @@ class ConnManager {
             cryptUtils.computeECDHSessionKey(otherPubKey);
             keyExchangeDone = true;
 
-            // Block waiting till noisy input is collected on phone
-            mmBuffer = new byte[INPUT_COLLECTED_MSG.length];
-            read();
-            noisyInputCollected = true;
+            // Wait till noisy input is collected
+            synchronized (noisyInputMsg) {
+                try {
+                    noisyInputMsg.wait();
+                }
+                catch(InterruptedException e) {
+                    Log.e(TAG, "Error while waiting for noisy Input to be collected.", e);
+                }
+            }
 
-            // Send ack message
-            write(ACK_MSG);
+            Log.i(TAG, "Noisy input collected successfully.");
 
             // Set start timer
             long startTime = System.currentTimeMillis();
